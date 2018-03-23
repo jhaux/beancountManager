@@ -6,55 +6,56 @@ from tkinter import N, E, S, W, LEFT, TOP, BOTTOM, CENTER, X, Y  # noqa
 from tkinter.simpledialog import Dialog
 
 from beancountManager.ledger import Transaction
+from beancountManager.referencer import StringComparison, StringModification
 
 
-class GetHelp(Dialog):
+class RuleDialog(Dialog):
 
-    def __init__(self, parent,
-                 entry, receiveFn,
-                 title='Get some Help!'):
-        print('GET HELP')
-
+    def __init__(self,
+                 parent,
+                 entry=None,
+                 rule=None,
+                 title='Edit Rule'):
         self.entry = entry
-        self.receiveFn = receiveFn
+        self.rule = rule
+
+        self.mode = 'edit' if rule is not None else 'add'
 
         Dialog.__init__(self, parent, title)
-
-        print('Called for Help')
 
     def body(self, parent):
         self.diagFrame = Frame(self)
         self.diagFrame.pack(side=TOP, fill=BOTH)
 
+        row_id = 0
         self.promt = Label(self.diagFrame,
-                           text='Could not match this entry to any rule. '
-                                'Please make changes manually or add a new '
-                                'rule.')
-        self.promt.grid(row=0, sticky=W, columnspan=2)
-                                        
-        self.entryLabel = Label(self.diagFrame,
-                                text=str(self.entry),
-                                justify=LEFT,
-                                relief=SUNKEN,
-                                wraplength=400)
-        self.entryLabel.grid(row=1, columnspan=2)
+                           text='Please specify the rule.')
+        self.promt.grid(row=row_id, sticky=W, columnspan=2)
+        row_id += 1
 
-        changables = [c for c in dir(self.entry) if not '__' in c]
-        changables = [c for c in changables if not callable(c)]
+        if self.entry:
+            self.entryLabel = Label(self.diagFrame,
+                                    text=str(self.entry),
+                                    justify=LEFT,
+                                    relief=SUNKEN,
+                                    wraplength=400)
+            self.entryLabel.grid(row=row_id, columnspan=2)
+            row_id += 1
 
         self.changes = {}
 
-        row_id = 2
-        if isinstance(self.entry, Transaction):
+        if self.entry and isinstance(self.entry, Transaction):
+            kind = 'transaction'
+        if rule:
+            kind = rule['kind']
+
+        if kind == 'transaction':
             Label(self.diagFrame,
                   text='Transaction Attributes').grid(row=row_id,
-                                                      columnspan=2)
+                                                      columnspan=4)
             row_id += 1
             name = 'narration'
-            self.changes[name] = \
-                    self.make_changable(name.title(),
-                                        getattr(self.entry, name),
-                                        row_id)
+            self.changes[name] = self.make_changable(name, row_id)
             row_id += 1
 
             name = 'meta'
@@ -90,14 +91,39 @@ class GetHelp(Dialog):
 
         return self.promt
 
-    def make_changable(self, name, value, row_id, kind='text'):
-        label = Label(self.diagFrame, text=name)
+    def make_changable(self, name, row_id, kind='text'):
+        label = Label(self.diagFrame, text=name.title)
         label.grid(row=row_id, column=0, sticky=E)
         
-        textContainer = StringVar()
-        if value is None:
-            value = ''
-        textContainer.set(value)
+        relation = StringVar()
+        pattern = StringVar()
+        change = StringVar()
+        changeTo = StringVar()
+
+        relMenu = OptionMenu(self.diagFrame,
+                             textvariable=relation,
+                             StringComparison.options)
+        relMenu.grid(row=row_id, column=1, sticky=W)
+
+        patEntry = Entry(self.diagFrame, textvariable=change)
+        patEntry.grid(row=row_id, column=2, sticky=W)
+
+        chMenu = OptionMenu(self.diagFrame,
+                            textvariable=change,
+                            StringModification.options)
+        chMenu.grid(row=row_id, column=3, sticky=W)
+
+        chVal = Entry(self.diagFrame, textvariable=changeTo)
+        chVal.grid(rwo=row_id, column=4, sticky=W)
+
+        ### The following is not good
+
+        if False and self.rule:
+            pat_orig = self.rule['pattern'][name]
+            ch_orig = self.rule['change'][name]
+
+            pattern.set(value)
+            change.set(value)
 
         if kind == 'text':
             content = Entry(self.diagFrame, textvariable=textContainer)

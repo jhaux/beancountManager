@@ -11,6 +11,7 @@ class Referencer(object):
             rules_file: path to the file containing the rules
         '''
 
+        self.rules_file = rules_file
         self.userInputFn = userInputFn
         self.rules = []
 
@@ -33,6 +34,15 @@ class Referencer(object):
         else:
             # Ask for help
             return entry
+
+    def add_rule(self, rule):
+        if not rule in self.rules:
+            self.rules.append(rule)
+            self.store_rules
+
+    def store_rules(self):
+        with open(self.rules_file, 'w+') as the_file:
+            the_file.write(json.dumps(self.rules, indent=4, sort_keys=True))
 
 
 class Rule(object):
@@ -108,8 +118,7 @@ class Rule(object):
 
 
 class StringComparison(object):
-    def __init__(self):
-        pass
+    options = ['contains', 'equal']
 
     @classmethod
     def contains(cls, s, test):
@@ -131,8 +140,7 @@ class StringComparison(object):
 
 
 class StringModification(object):
-    def __init__(self):
-        pass
+    options = ['exchange']
 
     @classmethod
     def exchange(cls, orig, new):

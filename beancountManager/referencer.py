@@ -21,15 +21,17 @@ class Referencer(object):
 
     def __call__(self, entry):
         if isinstance(entry, Transaction):
+            matchedSomeRule = False
             for rule in self.rules:
                 if rule.test(entry):
                     entry = rule.apply(entry)
-                    print(entry)
+                    matchedSomeRule = True
+            if not matchedSomeRule:
+                entry = self.userInputFn(entry)
             # Do something
             return entry
         else:
             # Ask for help
-            entry = self.userInputFn(entry)
             return entry
 
 

@@ -4,6 +4,7 @@ from tkinter import N, E, S, W, LEFT, TOP, BOTTOM, CENTER, X, Y  # noqa
 from tkinter.filedialog import askopenfilename
 
 from beancountManager import readers
+from beancountManager.get_help_dialog import GetHelp
 
 
 class Beanee(Frame):
@@ -26,7 +27,7 @@ class Beanee(Frame):
         self.headerFrame = Frame(self, bg='orange')
         self.headerFrame.pack(fill=X, padx=10, pady=10)
         self.bodyFrame = Frame(self)
-        self.bodyFrame.pack(fill=X, expand=1)
+        self.bodyFrame.pack(fill=BOTH, expand=1)
         self.bottomFrame = Frame(self, bg='red')
         self.bottomFrame.pack(side=BOTTOM, fill=X, padx=10, pady=10)
 
@@ -83,6 +84,7 @@ class Beanee(Frame):
     def sendDestroy(self, element):
         self.fileFrames.remove(element)
         self.sortFileDialogue()
+        self.toggleIntroText()
 
 
 class FileFrame(Frame):
@@ -90,6 +92,7 @@ class FileFrame(Frame):
     def __init__(self, parent, fname, index, receive):
         Frame.__init__(self, parent)
         self.parent = parent
+        self
 
         self.fname = fname
         self.index = index
@@ -102,7 +105,7 @@ class FileFrame(Frame):
 
         self.FilePathEntry.delete(0, END)
         self.FilePathEntry.insert(0, self.fname)
-        self.FilePathEntry.pack(side=LEFT, padx=5)
+        self.FilePathEntry.pack(side=LEFT, padx=5, fill=X, expand=1)
 
         self.csvType = StringVar()
         options = readers.options
@@ -121,9 +124,16 @@ class FileFrame(Frame):
             converter = getattr(readers, name)(name+'.rules', self.getHelp)
 
             self.ledger = converter(self.fname)
+            # print(self.ledger)
 
     def getHelp(self, entry):
+        helpDialog = GetHelp(self, entry, self.receiveUpdate)
+        entry = helpDialog.result
+
         return entry
+
+    def receiveUpdate(self, updatedEntry):
+        self.current_entry = updatedEntry
 
     def remove(self):
         self.receive(self)

@@ -5,7 +5,9 @@ from tkinter import N, E, S, W, LEFT, TOP, BOTTOM, CENTER, X, Y  # noqa
 
 from tkinter.simpledialog import Dialog
 
-from beancountManager.ledger import Transaction
+from beancount.core.data import Transaction
+from beancount.parser import printer
+
 from beancountManager.rule_dialog import RuleDialog
 
 
@@ -28,16 +30,13 @@ class GetHelp(Dialog):
                                 'Please make changes manually or add a new '
                                 'rule.')
         self.promt.grid(row=0, sticky=W, columnspan=2)
-                                        
+
         self.entryLabel = Label(self.diagFrame,
-                                text=str(self.entry),
+                                text=printer.format_entry(self.entry),
                                 justify=LEFT,
                                 relief=SUNKEN,
                                 wraplength=400)
         self.entryLabel.grid(row=1, columnspan=2)
-
-        changables = [c for c in dir(self.entry) if not '__' in c]
-        changables = [c for c in changables if not callable(c)]
 
         self.changes = {}
 
@@ -49,16 +48,16 @@ class GetHelp(Dialog):
             row_id += 1
             name = 'narration'
             self.changes[name] = \
-                    self.make_changable(name.title(),
-                                        getattr(self.entry, name),
-                                        row_id)
+                self.make_changable(name.title(),
+                                    getattr(self.entry, name),
+                                    row_id)
             row_id += 1
 
             name = 'meta'
             self.changes[name] = \
-                    self.make_changable(name.title(),
-                                        getattr(self.entry, name),
-                                        row_id)
+                self.make_changable(name.title(),
+                                    getattr(self.entry, name),
+                                    row_id)
             row_id += 1
 
             Label(self.diagFrame, text='Postings').grid(row=row_id,
@@ -70,17 +69,17 @@ class GetHelp(Dialog):
                 p_changes = {}
                 name = 'flag'
                 p_changes[name] = \
-                        self.make_changable(name.title(),
-                                            getattr(p, name),
-                                            row_id)
+                    self.make_changable(name.title(),
+                                        getattr(p, name),
+                                        row_id)
                 row_id += 1
 
                 name = 'account'
                 p_changes[name] = \
-                        self.make_changable(name.title(),
-                                            getattr(p, name),
-                                            row_id,
-                                            'menu')
+                    self.make_changable(name.title(),
+                                        getattr(p, name),
+                                        row_id,
+                                        'menu')
                 row_id += 1
 
                 self.changes['postings'].append(p_changes)
@@ -92,14 +91,33 @@ class GetHelp(Dialog):
 
         return self.promt
 
+    def refresh(self):
+        if self.changes:
+            for name, var in self.changes.items():
+                value = getattr(self.entry, name)
+                if not name == 'postings':
+                    if value is not None:
+                        var.set(value)
+                    else:
+                        var.set('')
+                else:
+                    for idx, p in enumerate(var):
+                        for p_name, p_var in p.items():
+                            p_value = getattr(value[idx], p_name)
+                            if p_value is not None:
+                                p_var.set(p_value)
+                            else:
+                                p_var.set('')
+
     def addRule(self):
         rd = RuleDialog(self.diagFrame, self.entry)
         self.entry = rd.entry
+        self.refresh()
 
     def make_changable(self, name, value, row_id, kind='text'):
         label = Label(self.diagFrame, text=name)
         label.grid(row=row_id, column=0, sticky=E)
-        
+
         textContainer = StringVar()
         if value is None:
             value = ''

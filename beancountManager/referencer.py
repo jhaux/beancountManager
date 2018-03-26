@@ -1,6 +1,7 @@
 import json
 
-from beancountManager.ledger import Transaction, Open, Balance
+from beancount.core.data import Transaction
+from beancount.parser import printer
 
 
 class Referencer(object):
@@ -36,7 +37,7 @@ class Referencer(object):
             return entry
 
     def add_rule(self, rule):
-        if not rule in self.rules:
+        if rule not in self.rules:
             self.rules.append(rule)
             self.store_rules
 
@@ -48,77 +49,101 @@ class Referencer(object):
 class Rule(object):
 
     def __init__(self, rule_dict):
-        for k, v in rule_dict.items():
-            setattr(self, k, v)
+        self.kind = rule_dict['kind']
+        self.rd = rule_dict['rule']
 
     def test(self, entry):
-        result = True
-        if self.kind == 'transaction':
-            for k, v in self.pattern.items():
-                if v is not None:
-                    if k != 'postings':
-                        for method, test in v.items():
-                            success = self.atomic_test(getattr(entry, k),
-                                                       method,
-                                                       test)
+        if type(entry).__name__ != self.kind:
+            return False
+        elif self.kind == 'Transaction':
+            result = True
+            for k, v in self.rd.items():
+                if k != 'postings' and k != 'units':
+                    method, test, _, _ = v
+                    success = self.atomic_test(getattr(entry, k),
+                                               method,
+                                               test)
+                    result = result and success
+                elif k == 'units':
+                    for pk, pv in v.items():
+                        method, test, _, _ = pv
+                        s = getattr(entry.units, pk)
+                        success = self.atomic_test(
+                                s,
+                                method,
+                                test)
+                        result = result and success
+                else:
+                    postings = entry.postings
+                    for idx, p in enumerate(v):
+                        for pk, pv in p.items():
+                            method, test, _, _ = pv
+                            s = getattr(postings[idx], pk)
+                            success = self.atomic_test(
+                                    s,
+                                    method,
+                                    test)
                             result = result and success
-                    else:
-                        idx = 1
-                        postings = entry.postings
-                        while str(idx) in v and len(postings) >= idx:
-                            for pk, pv in v[str(idx)].items():
-                                if pv is not None:
-                                    for method, test in pv.items():
-                                        s = getattr(postings[idx - 1], pk)
-                                        success = self.atomic_test(
-                                                s,
-                                                method,
-                                                test)
-                                        result = result and success
-
-                            idx += 1
-        return result
+            return result
+        else:
+            return False
 
     def atomic_test(self, string, method, test):
         test_method = getattr(StringComparison, method)
         success = test_method(string, test)
+        print('Compare: {} {} {}? => {}'.format(string, method, test, success))
 
         return success
 
     def apply(self, entry):
-        if self.kind == 'transaction':
-            for k, v in self.changes.items():
-                if v is not None:
-                    if k != 'postings':
-                        for method, change in v.items():
+        print('APPLY')
+        assert type(entry).__name__ == self.kind, 'Cannot apply rule'
+        printer.print_entry(entry)
+        if self.kind == 'Transaction':
+            for k, v in self.rd.items():
+                if k != 'postings' and k != 'units':
+                    _, _, method, change = v
+                    new_str = self.atomic_modofocation(
+                            getattr(entry, k),
+                            method,
+                            change)
+                    entry = entry._replace(**{k: new_str})
+                elif k == 'units':
+                    for pk, pv in v.items():
+                        _, _, method, change = pv
+                        s = getattr(entry.units, pk)
+                        new_str = self.atomic_modofocation(
+                                s,
+                                method,
+                                change)
+                        entry.units = pv._replace(**{pk: new_str})
+                else:
+                    postings = entry.postings
+                    for idx, p in enumerate(v):
+                        for pk, pv in v[idx].items():
+                            _, _, method, change = pv
                             new_str = self.atomic_modofocation(
-                                    getattr(entry, k),
+                                    getattr(postings[idx], pk),
                                     method,
                                     change)
-                            setattr(entry, k, new_str)
-                    else:
-                        idx = 1
-                        postings = entry.postings
-                        while str(idx) in v and len(postings) >= idx:
-                            for pk, pv in v[str(idx)].items():
-                                if pv is not None:
-                                    for method, change in pv.items():
-                                        new_str = self.atomic_modofocation(
-                                                getattr(postings[idx-1], pk),
-                                                method,
-                                                change)
-                                        setattr(postings[idx-1], pk, new_str)
-
-                            idx += 1
+                            postings[idx] = postings[idx]._replace(**{pk: new_str})
+            printer.print_entry(entry)
+            print(entry)
         return entry
 
     def atomic_modofocation(self, orig, method, change):
         change_method = getattr(StringModification, method)
-        return change_method(orig, change)
+        new_str = change_method(orig, change)
+        print('Change: {} {} {} => {}'.format(orig, method, change, new_str))
+        return new_str
 
 
 class StringComparison(object):
-    options = ['contains', 'equal']
+    options = ['contains', 'equal', 'any']
+
+    @classmethod
+    def any(cls, s, test):
+        return True
 
     @classmethod
     def contains(cls, s, test):
@@ -145,3 +170,6 @@ class StringModification(object):
     @classmethod
     def exchange(cls, orig, new):
         return new
+
+
+RULES = ['Transaction']

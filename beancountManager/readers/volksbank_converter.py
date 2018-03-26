@@ -1,7 +1,10 @@
 import numpy as np
 import pandas as pd
+import datetime
 
-from beancountManager.ledger import Ledger, Transaction, Open, Posting
+from beancount.core.data import Open, Close, Balance, Posting, Transaction
+from beancount.core.amount import Amount, NULL_AMOUNT
+from beancount.core.number import D
 from beancountManager.referencer import Referencer
 
 
@@ -17,7 +20,7 @@ class VolksbankConverter(object):
                     ledger entry if no rule can be applyed.
                     Has the signature (entry) => (entry)
         '''
-        self.ledger = Ledger()
+        self.ledger = []
         self.referencer = Referencer(references, userInputFn)
 
     def __call__(self, csv_file):
@@ -61,14 +64,35 @@ class VolksbankConverter(object):
             amount = float(row['amount'].replace(',', '.'))
             sign = 1 if row['HS'] == 'H' else -1
             date = row['date']
+            date = datetime.date(*[int(d) for d in date.split('.')[::-1]])
 
-            post_from = Posting(fr, amount*sign, curr)
-            post_to = Posting(to)
+            post_from = Posting(fr,  # Account
+                                Amount(D(amount*sign), curr),  # units/amount
+                                None,  # cost
+                                None,  # price
+                                None,  # flag
+                                None)  # meta
 
-            raw_tract = Transaction(date, [post_from, post_to], narration=narr)
+            post_to = Posting(to,  # Account
+                              NULL_AMOUNT,  # units/amount
+                              None,  # cost
+                              None,  # price
+                              None,  # flag
+                              None)  # meta
+
+            postings = [post_from, post_to]
+
+            raw_tract = Transaction(None,  # meta (optional)
+                                    date,  # date
+                                    None,  # flag
+                                    None,  # payee (optional)
+                                    narr,  # narration
+                                    None,  # tags
+                                    None,  # links
+                                    postings)  # postings
 
             tract = self.referencer(raw_tract)
 
-            self.ledger.add_entry(tract)
+            self.ledger.append(tract)
 
         return self.ledger

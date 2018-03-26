@@ -6,6 +6,7 @@ from tkinter import N, E, S, W, LEFT, TOP, BOTTOM, CENTER, X, Y  # noqa
 from tkinter.simpledialog import Dialog
 
 from beancountManager.ledger import Transaction
+from beancountManager.rule_dialog import RuleDialog
 
 
 class GetHelp(Dialog):
@@ -13,14 +14,10 @@ class GetHelp(Dialog):
     def __init__(self, parent,
                  entry, receiveFn,
                  title='Get some Help!'):
-        print('GET HELP')
-
         self.entry = entry
         self.receiveFn = receiveFn
 
         Dialog.__init__(self, parent, title)
-
-        print('Called for Help')
 
     def body(self, parent):
         self.diagFrame = Frame(self)
@@ -88,7 +85,16 @@ class GetHelp(Dialog):
 
                 self.changes['postings'].append(p_changes)
 
+        addRule = Button(self.diagFrame,
+                         text='Add Rule',
+                         command=self.addRule)
+        addRule.grid(row=row_id, column=0, sticky=N+E+S+W, columnspan=2)
+
         return self.promt
+
+    def addRule(self):
+        rd = RuleDialog(self.diagFrame, self.entry)
+        self.entry = rd.entry
 
     def make_changable(self, name, value, row_id, kind='text'):
         label = Label(self.diagFrame, text=name)
@@ -132,6 +138,7 @@ class GetHelp(Dialog):
             content.configure(menu=main)
 
         content.grid(row=row_id, column=1, sticky=W)
+        row_id += 1
 
         return textContainer
 

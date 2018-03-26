@@ -1,12 +1,13 @@
-from tkinter import Frame, Tk, BOTH, Label, Button, Entry, END
-from tkinter import Menu, OptionMenu, StringVar, Menubutton
+from tkinter import Frame, Tk, BOTH, Label, Button, Entry, END, Checkbutton
+from tkinter import Menu, OptionMenu, StringVar, Menubutton, IntVar
 from tkinter import SUNKEN
 from tkinter import N, E, S, W, LEFT, TOP, BOTTOM, CENTER, X, Y  # noqa
-
 from tkinter.simpledialog import Dialog
+from collections import OrderedDict
 
 from beancountManager.ledger import Transaction
 from beancountManager.referencer import StringComparison, StringModification
+from beancountManager.referencer import Rule
 
 
 class RuleDialog(Dialog):
@@ -30,7 +31,7 @@ class RuleDialog(Dialog):
         row_id = 0
         self.promt = Label(self.diagFrame,
                            text='Please specify the rule.')
-        self.promt.grid(row=row_id, sticky=W, columnspan=2)
+        self.promt.grid(row=row_id, sticky=W+E, columnspan=5)
         row_id += 1
 
         if self.entry:
@@ -39,61 +40,94 @@ class RuleDialog(Dialog):
                                     justify=LEFT,
                                     relief=SUNKEN,
                                     wraplength=400)
-            self.entryLabel.grid(row=row_id, columnspan=2)
+            self.entryLabel.grid(row=row_id, columnspan=5)
             row_id += 1
 
         self.changes = {}
 
         if self.entry and isinstance(self.entry, Transaction):
             kind = 'transaction'
-        if rule:
+        elif rule:
             kind = rule['kind']
 
         if kind == 'transaction':
             Label(self.diagFrame,
                   text='Transaction Attributes').grid(row=row_id,
-                                                      columnspan=4)
-            row_id += 1
-            name = 'narration'
-            self.changes[name] = self.make_changable(name, row_id)
+                                                      columnspan=5,
+                                                      sticky=E+W)
             row_id += 1
 
-            name = 'meta'
-            self.changes[name] = \
-                    self.make_changable(name.title(),
-                                        getattr(self.entry, name),
-                                        row_id)
+            for col, n in enumerate(['Field',
+                                     'Relation',
+                                     'Pattern',
+                                     'Ch. Method',
+                                     'New Value']):
+                Label(self.diagFrame, text=n).grid(row=row_id,
+                                                   column=col,
+                                                   sticky=E+W)
             row_id += 1
+            
+            self.newRule = getProtoRule()
 
-            Label(self.diagFrame, text='Postings').grid(row=row_id,
-                                                        columnspan=2)
-            row_id += 1
-
-            self.changes['postings'] = []
-            for idx, p in enumerate(self.entry.postings):
-                p_changes = {}
-                name = 'flag'
-                p_changes[name] = \
-                        self.make_changable(name.title(),
-                                            getattr(p, name),
-                                            row_id)
-                row_id += 1
-
-                name = 'account'
-                p_changes[name] = \
-                        self.make_changable(name.title(),
-                                            getattr(p, name),
-                                            row_id,
-                                            'menu')
-                row_id += 1
-
-                self.changes['postings'].append(p_changes)
+            self.recursiveMakeChangable(self.newRule,
+                                        row_id,
+                                        self.entry,
+                                        self.rule)
 
         return self.promt
 
-    def make_changable(self, name, row_id, kind='text'):
-        label = Label(self.diagFrame, text=name.title)
-        label.grid(row=row_id, column=0, sticky=E)
+    def recursiveMakeChangable(self, ruleDict, startRow,
+                               entry=None, rule=None):
+        kind = ruleDict['kind']
+        patterns = ruleDict['pattern']
+        changes = ruleDict['changes']
+
+        row_id = startRow
+        for k in patterns.keys():
+            vp = patterns[k]
+            vc = changes[k]
+            if not vp:
+                preVals = {}
+                if entry:
+                    pat =  getattr(entry, k)
+                    preVals['pattern'] = pat if pat else ''
+                if rule:
+                    preVals['pattern'] = list(rule['pattern'][k].values())[0]
+                    preVals['relation'] = list(rule['pattern'][k].keys())[0]
+                    preVals['change'] = list(rule['changes'][k].values())[0]
+                    preVals['changeTo'] = list(rule['changes'][k].keys())[0]
+
+                # add pattern change pair
+                rel, pat, ch, cht = \
+                    self.make_changable(k, row_id, preVals=preVals)
+                patterns[k] = [rel, pat]
+                changes[k] = [ch, cht]
+                row_id += 1
+            else:
+                label = Label(self.diagFrame, text=k.title())
+                label.grid(row=row_id, column=0, sticky=E+W)
+                row_id += 1
+
+                subDict = {'kind': kind,
+                           'pattern': vp,
+                           'changes': vc}
+                if not k.isdigit():
+                    subEntry = None if not entry else getattr(entry, k)
+                else:
+                    subEntry = None if not entry else entry[int(k)-1]
+                subRule = None if not rule else \
+                        {'pattern': rule['pattern'][k],
+                         'changes': rule['changes'][k]}
+
+                subdDict, row_id = self.recursiveMakeChangable(subDict,
+                                                               row_id,
+                                                               subEntry,
+                                                               subRule)
+        return ruleDict, row_id
+            
+
+    def make_changable(self, name, row_id,
+                       kind='text', preVals=None):
         
         relation = StringVar()
         pattern = StringVar()
@@ -101,77 +135,119 @@ class RuleDialog(Dialog):
         changeTo = StringVar()
 
         relMenu = OptionMenu(self.diagFrame,
-                             textvariable=relation,
-                             StringComparison.options)
+                             relation,
+                             *StringComparison.options)
         relMenu.grid(row=row_id, column=1, sticky=W)
 
-        patEntry = Entry(self.diagFrame, textvariable=change)
+        patEntry = Entry(self.diagFrame, textvariable=pattern)
         patEntry.grid(row=row_id, column=2, sticky=W)
 
         chMenu = OptionMenu(self.diagFrame,
-                            textvariable=change,
-                            StringModification.options)
+                            change,
+                            *StringModification.options)
         chMenu.grid(row=row_id, column=3, sticky=W)
 
         chVal = Entry(self.diagFrame, textvariable=changeTo)
-        chVal.grid(rwo=row_id, column=4, sticky=W)
+        chVal.grid(row=row_id, column=4, sticky=W)
 
-        ### The following is not good
+        settableItems = [relMenu, patEntry, chMenu, chVal]
+        checkVar = IntVar()
+        label = Checkbutton(self.diagFrame,
+                            text=name.title(),
+                            variable=checkVar,
+                            onvalue=1,
+                            offvalue=0,
+                            command=self.getCheckcommand(checkVar,
+                                                         settableItems))
+        label.select()
+        label.grid(row=row_id, column=0, sticky=E)
 
-        if False and self.rule:
-            pat_orig = self.rule['pattern'][name]
-            ch_orig = self.rule['change'][name]
 
-            pattern.set(value)
-            change.set(value)
+        if preVals:
+            if 'relation' in preVals:
+                relation.set(preVals['relation'])
+            if 'pattern' in preVals:
+                pattern.set(preVals['pattern'])
+            if 'change' in preVals:
+                change.set(preVals['change'])
+            if 'changeTo' in preVals:
+                changeTo.set(preVals['changeTo'])
 
-        if kind == 'text':
-            content = Entry(self.diagFrame, textvariable=textContainer)
-        elif kind == 'menu':
-            content = Menubutton(self.diagFrame,
-                                 textvariable=textContainer,
-                                 indicatoron=True)
+        return relation, pattern, change, changeTo
 
-            main = Menu(content, tearoff=False)
-            subA = Menu(main, tearoff=0)
-            subA.add_radiobutton(
-                    label='VB',
-                    variable=textContainer,
-                    value='Assets:VB')
-            subA.add_radiobutton(
-                    label='VC',
-                    variable=textContainer,
-                    value='Assets:VC')
-            main.add_cascade(label='Assets', menu=subA)
+    def getCheckcommand(self, checkVar, settableItems):
+        def onOffFn():
+            isOn = checkVar.get() == 1
+            for item in settableItems:
+                item['state'] = 'normal' if isOn else 'disabled'
+        return onOffFn
 
-            subI = Menu(main, tearoff=0)
-            subI.add_radiobutton(
-                    label='SingenEV',
-                    variable=textContainer,
-                    value='Income:SingenEV')
-            subI.add_radiobutton(
-                    label='Uni',
-                    variable=textContainer,
-                    value='Income:Uni')
-            main.add_cascade(label='Income', menu=subI)
+    def recursiveGetNewRule(self, ruleDict):
+        for k, v in ruleDict.items():
+            if isinstance(v, dict):
+                v = self.recursiveGetNewRule(v)
+            elif isinstance(v, list):
+                v = {v[0].get(): v[1].get()}
+            ruleDict[k] = v
+        return ruleDict
 
-            content.configure(menu=main)
-
-        content.grid(row=row_id, column=1, sticky=W)
-
-        return textContainer
+    def getNewRule(self):
+        self.newRule = newRule = self.recursiveGetNewRule(self.newRule)
+        return newRule
 
     def apply(self):
-        for attr, value in self.changes.items():
-            if value == '' or value == 'None':
-                value = None
-            elif attr == 'postings':
-                for i, p in enumerate(self.changes['postings']):
-                    for p_attr, p_value in p.items():
-                        if p_value == '' or p_value == 'None':
-                            p_value = None
-                        setattr(self.entry.postings[i], p_attr, p_value)
-            setattr(self.entry, attr, value)
+        newRuleDict = self.getNewRule()
+        newRule = Rule(newRuleDict)
+        if self.entry:
+            if newRule.test(self.entry):
+                newRule.apply(self.entry)
 
-        self.result = self.entry
-        self.receiveFn(self.entry)
+
+def getProtoRule():
+    return OrderedDict({
+            "kind": None,
+            "pattern":
+            OrderedDict({
+                    "date": None,
+                    "narration": None,
+                    "postings":
+                    OrderedDict({
+                            "1":
+                            {
+                            "flag": None,
+                            "account": None,
+                            "amount": None,
+                            "currency": None
+                            },
+                            "2":
+                            {
+                            "flag": None,
+                            "account": None,
+                            "amount": None,
+                            "currency": None
+                            }
+                    })
+            }),
+            "changes":
+            OrderedDict({
+                    "date": None,
+                    "narration": None,
+                    "postings": 
+                    OrderedDict({
+                            "1":
+                            {
+                            "flag": None,
+                            "account": None,
+                            "amount": None,
+                            "currency": None
+                            },
+                            "2":
+                            {
+                            "flag": None,
+                            "account": None,
+                            "amount": None,
+                            "currency": None
+                            }
+                    })
+            })
+    })

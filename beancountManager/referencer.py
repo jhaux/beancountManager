@@ -1,13 +1,14 @@
 import json
 
 from beancount.core.data import Transaction
-from beancount.parser import printer
+
+from beancountManager.util import backup_file_by_sessio_start
 
 
 class Referencer(object):
     '''Contains rules, by which the incoming ledger entries are formatted.'''
 
-    def __init__(self, rules_file, userInputFn):
+    def __init__(self, rules_file, userInputFn, session_start='noid'):
         '''Arguments:
             rules_file: path to the file containing the rules
         '''
@@ -15,10 +16,11 @@ class Referencer(object):
         self.rules_file = rules_file
         self.userInputFn = userInputFn
         self.rules = []
+        self.session_start = session_start
 
         with open(rules_file, 'r') as the_file:
-            rule_dicts = json.load(the_file)
-            for rule in rule_dicts:
+            self.rule_dicts = json.load(the_file)
+            for rule in self.rule_dicts:
                 self.rules.append(Rule(rule))
 
     def __call__(self, entry):
@@ -29,7 +31,9 @@ class Referencer(object):
                     entry = rule.apply(entry)
                     matchedSomeRule = True
             if not matchedSomeRule:
-                entry = self.userInputFn(entry)
+                entry, rule = self.userInputFn(entry)
+                if rule:
+                    self.add_rule(rule)
             # Do something
             return entry
         else:
@@ -37,13 +41,19 @@ class Referencer(object):
             return entry
 
     def add_rule(self, rule):
-        if rule not in self.rules:
-            self.rules.append(rule)
-            self.store_rules
+        if rule not in self.rule_dicts:
+            self.rule_dicts.append(rule)
+            print(self.rule_dicts)
+            self.rules.append(Rule(rule))
+            self.store_rules()
 
     def store_rules(self):
+        backup_file_by_sessio_start(self.rules_file, self.session_start)
+
         with open(self.rules_file, 'w+') as the_file:
-            the_file.write(json.dumps(self.rules, indent=4, sort_keys=True))
+            the_file.write(json.dumps(self.rule_dicts,
+                                      indent=4,
+                                      sort_keys=True))
 
 
 class Rule(object):
@@ -64,41 +74,44 @@ class Rule(object):
                                                method,
                                                test)
                     result = result and success
-                elif k == 'units':
-                    for pk, pv in v.items():
-                        method, test, _, _ = pv
-                        s = getattr(entry.units, pk)
-                        success = self.atomic_test(
-                                s,
-                                method,
-                                test)
-                        result = result and success
                 else:
                     postings = entry.postings
                     for idx, p in enumerate(v):
                         for pk, pv in p.items():
-                            method, test, _, _ = pv
-                            s = getattr(postings[idx], pk)
-                            success = self.atomic_test(
-                                    s,
-                                    method,
-                                    test)
-                            result = result and success
+                            if pk == 'units':
+                                for uk, uv in pv.items():
+                                    method, test, _, _ = uv
+                                    s = getattr(postings[idx].units, uk)
+                                    success = self.atomic_test(
+                                            s,
+                                            method,
+                                            test)
+                                    result = result and success
+                            else:
+                                method, test, _, _ = pv
+                                s = getattr(postings[idx], pk)
+                                success = self.atomic_test(
+                                        s,
+                                        method,
+                                        test)
+                                result = result and success
             return result
         else:
             return False
 
     def atomic_test(self, string, method, test):
+        string = str(string)
         test_method = getattr(StringComparison, method)
         success = test_method(string, test)
-        print('Compare: {} {} {}? => {}'.format(string, method, test, success))
+        print('Compare: {} {} {}? => {}'.format(string,
+                                                method,
+                                                test,
+                                                success))
 
         return success
 
     def apply(self, entry):
-        print('APPLY')
         assert type(entry).__name__ == self.kind, 'Cannot apply rule'
-        printer.print_entry(entry)
         if self.kind == 'Transaction':
             for k, v in self.rd.items():
                 if k != 'postings' and k != 'units':
@@ -108,33 +121,38 @@ class Rule(object):
                             method,
                             change)
                     entry = entry._replace(**{k: new_str})
-                elif k == 'units':
-                    for pk, pv in v.items():
-                        _, _, method, change = pv
-                        s = getattr(entry.units, pk)
-                        new_str = self.atomic_modofocation(
-                                s,
-                                method,
-                                change)
-                        entry.units = pv._replace(**{pk: new_str})
                 else:
                     postings = entry.postings
                     for idx, p in enumerate(v):
                         for pk, pv in v[idx].items():
-                            _, _, method, change = pv
-                            new_str = self.atomic_modofocation(
-                                    getattr(postings[idx], pk),
-                                    method,
-                                    change)
-                            postings[idx] = postings[idx]._replace(**{pk: new_str})
-            printer.print_entry(entry)
-            print(entry)
+                            if pk == 'units':
+                                units = postings[idx].units
+                                for uk, uv in pv.items():
+                                    _, _, method, change = uv
+                                    s = getattr(units, uk)
+                                    new_str = self.atomic_modofocation(
+                                            s,
+                                            method,
+                                            change)
+                                    units = units._replace(**{uk: new_str})
+                            else:
+                                _, _, method, change = pv
+                                new_str = self.atomic_modofocation(
+                                        getattr(postings[idx], pk),
+                                        method,
+                                        change)
+                                postings[idx] = postings[idx]._replace(
+                                        **{pk: new_str}
+                                        )
         return entry
 
     def atomic_modofocation(self, orig, method, change):
         change_method = getattr(StringModification, method)
         new_str = change_method(orig, change)
-        print('Change: {} {} {} => {}'.format(orig, method, change, new_str))
+        print('Change: {} {} {} => {}'.format(orig,
+                                              method,
+                                              change,
+                                              new_str))
         return new_str
 
 
@@ -165,11 +183,15 @@ class StringComparison(object):
 
 
 class StringModification(object):
-    options = ['exchange']
+    options = ['exchange', 'leave']
 
     @classmethod
     def exchange(cls, orig, new):
         return new
+
+    @classmethod
+    def leave(cls, orig, new):
+        return orig
 
 
 RULES = ['Transaction']

@@ -7,17 +7,26 @@ from tkinter.simpledialog import Dialog
 
 from beancount.core.data import Transaction
 from beancount.parser import printer
+from beancount.core.realization import realize
 
 from beancountManager.rule_dialog import RuleDialog
+from beancountManager.util import CustomMenubutton
 
 
 class GetHelp(Dialog):
 
-    def __init__(self, parent,
-                 entry, receiveFn,
-                 title='Get some Help!'):
+    def __init__(self,
+                 parent,
+                 entry,
+                 ledger,
+                 title='Get some Help!',
+                 sess_id='noid'):
         self.entry = entry
-        self.receiveFn = receiveFn
+        self.ledger = ledger
+
+        self.sess_id = sess_id
+
+        self.rule = None
 
         Dialog.__init__(self, parent, title)
 
@@ -110,8 +119,12 @@ class GetHelp(Dialog):
                                 p_var.set('')
 
     def addRule(self):
-        rd = RuleDialog(self.diagFrame, self.entry)
+        rd = RuleDialog(self.diagFrame,
+                        self.entry,
+                        self.ledger,
+                        sess_id=self.sess_id)
         self.entry = rd.entry
+        self.rule = rd.rule
         self.refresh()
 
     def make_changable(self, name, value, row_id, kind='text'):
@@ -126,34 +139,11 @@ class GetHelp(Dialog):
         if kind == 'text':
             content = Entry(self.diagFrame, textvariable=textContainer)
         elif kind == 'menu':
-            content = Menubutton(self.diagFrame,
-                                 textvariable=textContainer,
-                                 indicatoron=True)
-
-            main = Menu(content, tearoff=False)
-            subA = Menu(main, tearoff=0)
-            subA.add_radiobutton(
-                    label='VB',
-                    variable=textContainer,
-                    value='Assets:VB')
-            subA.add_radiobutton(
-                    label='VC',
-                    variable=textContainer,
-                    value='Assets:VC')
-            main.add_cascade(label='Assets', menu=subA)
-
-            subI = Menu(main, tearoff=0)
-            subI.add_radiobutton(
-                    label='SingenEV',
-                    variable=textContainer,
-                    value='Income:SingenEV')
-            subI.add_radiobutton(
-                    label='Uni',
-                    variable=textContainer,
-                    value='Income:Uni')
-            main.add_cascade(label='Income', menu=subI)
-
-            content.configure(menu=main)
+            content = CustomMenubutton(self.diagFrame,
+                                       self.ledger,
+                                       self.entry,
+                                       textvariable=textContainer,
+                                       indicatoron=True)
 
         content.grid(row=row_id, column=1, sticky=W)
         row_id += 1
@@ -169,8 +159,5 @@ class GetHelp(Dialog):
                     for p_attr, p_value in p.items():
                         if p_value == '' or p_value == 'None':
                             p_value = None
-                        setattr(self.entry.postings[i], p_attr, p_value)
-            setattr(self.entry, attr, value)
-
-        self.result = self.entry
-        self.receiveFn(self.entry)
+                        self.entry.postings[i]._replace(**{p_attr: p_value})
+            self.entry._replace(**{attr: value})

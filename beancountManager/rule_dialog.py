@@ -9,6 +9,7 @@ from beancount.core.data import Transaction
 from beancount.parser import printer
 from beancountManager.referencer import StringComparison, StringModification
 from beancountManager.referencer import Rule, RULES
+from beancountManager.util import CustomMenubutton
 
 
 class RuleDialog(Dialog):
@@ -16,16 +17,21 @@ class RuleDialog(Dialog):
     def __init__(self,
                  parent,
                  entry=None,
+                 ledger=[],
                  rule=None,
-                 title='Edit Rule'):
+                 title='Edit Rule',
+                 sess_id='noid'):
         self.entry = entry
         self.rule = rule
+
+        self.ledger = ledger
+
+        self.sess_id = sess_id
 
         self.kind = None if not entry else type(entry).__name__
         self.kind = self.kind if not rule else rule['kind']
 
         self.newRule = getProtoRule(self.kind)
-        print(self.newRule)
 
         self.mode = 'edit' if rule is not None else 'add'
 
@@ -98,11 +104,8 @@ class RuleDialog(Dialog):
         kind = theRuleDict['kind']
         ruleDict = theRuleDict['rule']
 
-        print(ruleDict)
-
         row_id = startRow
         for k, r in ruleDict.items():
-            print(k, r)
             if not isinstance(r, (dict, OrderedDict)) and k != 'postings':
                 preVals = self.setToEmpty()
                 if rule and k in ruleDict:
@@ -172,20 +175,35 @@ class RuleDialog(Dialog):
                             *StringModification.options)
         chMenu.grid(row=row_id, column=3, sticky=W)
 
-        chVal = Entry(self.diagFrame, textvariable=changeTo)
+        if name == 'account':
+            chVal = CustomMenubutton(self.diagFrame,
+                                     self.ledger,
+                                     self.entry,
+                                     textvariable=changeTo,
+                                     indicatoron=True)
+        else:
+            chVal = Entry(self.diagFrame, textvariable=changeTo)
         chVal.grid(row=row_id, column=4, sticky=W)
 
         settableItems = [relMenu, patEntry, chMenu, chVal]
         checkVar = IntVar()
+        command = self.getCheckcommand(checkVar, settableItems)
         label = Checkbutton(self.diagFrame,
                             text=name.title(),
                             variable=checkVar,
                             onvalue=True,
                             offvalue=False,
-                            command=self.getCheckcommand(checkVar,
-                                                         settableItems))
-        label.select()
-        label.grid(row=row_id, column=0, sticky=E)
+                            command=command)
+        label.grid(row=row_id, column=0, sticky=E+W)
+
+        if not preVals:
+            label.deselect()
+        else:
+            if not preVals['pattern']:
+                label.deselect()
+            else:
+                label.select()
+        command()
 
         if preVals:
             if 'relation' in preVals:
@@ -208,7 +226,6 @@ class RuleDialog(Dialog):
 
     def recursiveGetNewRule(self, ruleDict):
         for k, v in list(ruleDict.items()):
-            print(k)
             if isinstance(v, (dict, OrderedDict)) \
                     or k == 'postings':
                 if k == 'postings':
@@ -233,12 +250,10 @@ class RuleDialog(Dialog):
 
     def apply(self):
         newRuleDict = self.getNewRule()
+        self.rule = newRuleDict
         newRule = Rule(newRuleDict)
-        print(newRuleDict)
         if self.entry:
-            print('ENTRY')
             if newRule.test(self.entry):
-                print('TEST')
                 self.entry = newRule.apply(self.entry)
 
 

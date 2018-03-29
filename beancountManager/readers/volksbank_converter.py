@@ -10,7 +10,7 @@ from beancountManager.referencer import Referencer
 
 class VolksbankConverter(object):
 
-    def __init__(self, references, userInputFn):
+    def __init__(self, references, userInputFn, sess_id='noid'):
         '''Sets up the Reader.
 
         Arguments:
@@ -19,9 +19,11 @@ class VolksbankConverter(object):
             userInputFn: Function, which can be called to correctly format the
                     ledger entry if no rule can be applyed.
                     Has the signature (entry) => (entry)
+            sess_id: unique identifier for backups
         '''
         self.ledger = []
-        self.referencer = Referencer(references, userInputFn)
+        self.referencer = Referencer(references, userInputFn, sess_id)
+        self.sess_id = sess_id
 
     def __call__(self, csv_file):
         '''Reads all relevant data in one vb csv file and returns it as a

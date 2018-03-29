@@ -3,6 +3,12 @@ from tkinter import Menu, Menubutton, StringVar, Label
 from tkinter import W, E, S, N, X, Y
 from tkinter import simpledialog
 
+import os
+from shutil import copyfile
+
+from beancount.core.realization import realize
+from beancount.core.data import Open
+
 
 class LeTestApp(Frame):
     def __init__(self, parent, leDict):
@@ -25,15 +31,30 @@ class LeTestApp(Frame):
         self.mb.refresh()
 
 
+def backup_file_by_sessio_start(filepath, session_start):
+    '''Backs up a file once per Session, if there are changes made to it.
+
+    Arguments:
+        filepath: path to the file to be stored.
+        session_start: unique identifier for the current session.
+    '''
+
+    backup_name = filepath + '.bak.{}'.format(session_start)
+    if not os.path.isfile(backup_name):
+        copyfile(filepath, backup_name)
+
+
 class CustomMenubutton(Menubutton):
-    def __init__(self, parent, menuDict, **kwargs):
-        self.menuDict = menuDict
+    def __init__(self, parent, ledger, entry, **kwargs):
+        self.entry = entry  # Current entry for which this menu is created
+        self.ledger = ledger
         self.tv = kwargs['textvariable']
         Menubutton.__init__(self, parent, **kwargs)
 
         self.refresh()
 
     def refresh(self):
+        self.menuDict = realize(self.ledger)
         self.mainMenu = Menu(self, tearoff=False)
         self.dictGenerator(self.menuDict,
                            menu=self.mainMenu)
@@ -69,19 +90,20 @@ class CustomMenubutton(Menubutton):
             ret = simpledialog.askstring('Enter the new Field',
                                          'I said ENTEEER')
             if ret:
-                self.addEntry(ret, fallbackString)
-                ret = ':'.join([fallbackString, ret])
+                ret = ':'.join([fallbackString, ret]) if fallbackString \
+                                                      else ret
+                self.addEntry(ret, self.entry)
             else:
                 ret = fallbackString
             self.tv.set(ret)
         return askForString
 
-    def addEntry(self, entry, fallbackString):
-        keys = fallbackString.split(':')
-        d = self.menuDict
-        for key in keys:
-            d = d[key]
-        d[entry] = {}
+    def addEntry(self, account, entry):
+
+        date = entry.date
+        opendir = Open(None, date, account, None, None)
+
+        self.ledger += [opendir]
 
         self.refresh()
 

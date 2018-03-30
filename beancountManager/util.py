@@ -39,7 +39,12 @@ def backup_file_by_sessio_start(filepath, session_start):
         session_start: unique identifier for the current session.
     '''
 
-    backup_name = filepath + '.bak.{}'.format(session_start)
+    names = filepath.split('/')
+    name = '.' + names[-1]
+    names[-1] = name
+    newpath = '/'.join(names)
+
+    backup_name = '{}.bak.{}'.format(newpath, session_start)
     if not os.path.isfile(backup_name):
         copyfile(filepath, backup_name)
 
@@ -66,7 +71,8 @@ class CustomMenubutton(Menubutton):
                       jointString=None,
                       menu=None):
         if len(indict) != 0:
-            for k, v in indict.items():
+            key_val_pairs = sorted(list(indict.items()), key=lambda kv: kv[0])
+            for k, v in key_val_pairs:
                 subMenu = Menu(menu, tearoff=0)
                 js = joint.join([jointString, k]) if jointString else k
                 self.dictGenerator(v,

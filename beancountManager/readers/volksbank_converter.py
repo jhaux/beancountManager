@@ -10,7 +10,7 @@ from beancountManager.referencer import Referencer
 
 class VolksbankConverter(object):
 
-    def __init__(self, references, userInputFn, sess_id='noid'):
+    def __init__(self, references, userInputFn, ledger, sess_id='noid'):
         '''Sets up the Reader.
 
         Arguments:
@@ -21,11 +21,11 @@ class VolksbankConverter(object):
                     Has the signature (entry) => (entry)
             sess_id: unique identifier for backups
         '''
-        self.ledger = []
-        self.referencer = Referencer(references, userInputFn, sess_id)
+        self.ledger = ledger
+        self.referencer = Referencer(references, userInputFn, ledger, sess_id)
         self.sess_id = sess_id
 
-    def __call__(self, csv_file):
+    def __call__(self, csv_file, pbar=None):
         '''Reads all relevant data in one vb csv file and returns it as a
         preprocessed ledger class object.
 
@@ -36,11 +36,9 @@ class VolksbankConverter(object):
             vb_ledger: ledger object containing all relevant data
         '''
 
-        data = self.read_data(csv_file)
+        self.read_data(csv_file, pbar)
 
-        return data
-
-    def read_data(self, csv_file):
+    def read_data(self, csv_file, pbar=None):
         raw_data = pd.read_csv(csv_file,
                                skiprows=13,
                                skipfooter=3,
@@ -55,9 +53,16 @@ class VolksbankConverter(object):
         # balance_in = raw_data['amount'][-1]
         # balance_out = raw_data['amount'][-2]
 
+        if pbar:
+            pbar['maximum'] = len(raw_data)
+            pbar['maximum'] = 17 - 13
+
         for index, row in raw_data.iterrows():
             if index < 13:
                 continue
+
+            if index > 16:
+                break
 
             fr = row['from']
             to = row['to']
@@ -69,14 +74,14 @@ class VolksbankConverter(object):
             date = datetime.date(*[int(d) for d in date.split('.')[::-1]])
 
             post_from = Posting(fr,  # Account
-                                Amount(D(amount*sign), curr),  # units/amount
+                                Amount(D(str(amount*sign)), curr),  # units
                                 None,  # cost
                                 None,  # price
                                 None,  # flag
                                 None)  # meta
 
             post_to = Posting(to,  # Account
-                              NULL_AMOUNT,  # units/amount
+                              Amount(D(str(-amount*sign)), curr),  # units
                               None,  # cost
                               None,  # price
                               None,  # flag
@@ -86,7 +91,7 @@ class VolksbankConverter(object):
 
             raw_tract = Transaction(None,  # meta (optional)
                                     date,  # date
-                                    None,  # flag
+                                    '*',  # flag
                                     None,  # payee (optional)
                                     narr,  # narration
                                     None,  # tags
@@ -95,6 +100,9 @@ class VolksbankConverter(object):
 
             tract = self.referencer(raw_tract)
 
-            self.ledger.append(tract)
+            self.ledger += tract
+
+            if pbar:
+                pbar.step()
 
         return self.ledger

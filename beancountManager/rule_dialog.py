@@ -263,7 +263,10 @@ def getProtoRule(kind):
 
     if kind == 'Transaction':
         rule['flag'] = None
+        rule['payee'] = None
         rule['narration'] = None
+        rule['tags'] = None
+        rule['links'] = None
         rule['postings'] = []
 
         emptyPosting = OrderedDict()

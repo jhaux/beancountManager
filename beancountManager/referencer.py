@@ -1,6 +1,6 @@
 import json
 
-from beancount.core.data import Transaction
+from beancount.core.data import Transaction, Open
 
 from beancountManager.util import backup_file_by_sessio_start
 
@@ -8,10 +8,12 @@ from beancountManager.util import backup_file_by_sessio_start
 class Referencer(object):
     '''Contains rules, by which the incoming ledger entries are formatted.'''
 
-    def __init__(self, rules_file, userInputFn, session_start='noid'):
+    def __init__(self, rules_file, userInputFn, ledger, session_start='noid'):
         '''Arguments:
             rules_file: path to the file containing the rules
         '''
+
+        self.ledger = ledger
 
         self.rules_file = rules_file
         self.userInputFn = userInputFn
@@ -34,16 +36,17 @@ class Referencer(object):
                 entry, rule = self.userInputFn(entry)
                 if rule:
                     self.add_rule(rule)
-            # Do something
-            return entry
-        else:
-            # Ask for help
-            return entry
+        ret_list = [entry]
+
+        for p in entry.postings:
+            if self.is_not_open(p.account):
+                ret_list = [Open(None, entry.date, p.account, None, None)] \
+                    + ret_list
+        return ret_list
 
     def add_rule(self, rule):
         if rule not in self.rule_dicts:
             self.rule_dicts.append(rule)
-            print(self.rule_dicts)
             self.rules.append(Rule(rule))
             self.store_rules()
 
@@ -54,6 +57,13 @@ class Referencer(object):
             the_file.write(json.dumps(self.rule_dicts,
                                       indent=4,
                                       sort_keys=True))
+
+    def is_not_open(self, account):
+        isOpen = False
+        for e in self.ledger:
+            if isinstance(e, Open):
+                isOpen = isOpen or e.account == account
+        return not isOpen
 
 
 class Rule(object):
@@ -103,10 +113,10 @@ class Rule(object):
         string = str(string)
         test_method = getattr(StringComparison, method)
         success = test_method(string, test)
-        print('Compare: {} {} {}? => {}'.format(string,
-                                                method,
-                                                test,
-                                                success))
+        # print('Compare: {} {} {}? => {}'.format(string,
+        #                                         method,
+        #                                         test,
+        #                                         success))
 
         return success
 
@@ -149,10 +159,10 @@ class Rule(object):
     def atomic_modofocation(self, orig, method, change):
         change_method = getattr(StringModification, method)
         new_str = change_method(orig, change)
-        print('Change: {} {} {} => {}'.format(orig,
-                                              method,
-                                              change,
-                                              new_str))
+        # print('Change: {} {} {} => {}'.format(orig,
+        #                                       method,
+        #                                       change,
+        #                                       new_str))
         return new_str
 
 

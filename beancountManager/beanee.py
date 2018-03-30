@@ -1,6 +1,6 @@
 from tkinter import Frame, Tk, BOTH, Label, Button, Entry, END
 from tkinter import OptionMenu, StringVar, Grid
-from tkinter.ttk import Separator
+from tkinter.ttk import Separator, Progressbar
 from tkinter import N, E, S, W, LEFT, TOP, BOTTOM, CENTER, X, Y  # noqa
 from tkinter.filedialog import askopenfilename
 
@@ -47,11 +47,8 @@ class Beanee(Frame):
         self.bottomFrame.pack(side=BOTTOM, fill=X, padx=10, pady=10)
 
         Grid.columnconfigure(self.bodyFrame, 0, weight=1)
-
-        self.label = Label(self.bottomFrame,
-                           text='Beancount Import Manager - Version {}'
-                                .format(beancountManager.__version__))
-        self.label.pack()
+        Grid.columnconfigure(self.bottomFrame, 0, weight=1)
+        Grid.rowconfigure(self.bottomFrame, 0, weight=1)
 
         self.sep = Separator(self.bodyFrame, orient='horizontal')
         self.sep.grid(row=0, sticky=W+E)
@@ -66,6 +63,13 @@ class Beanee(Frame):
         self.storeLedgerButton = Button(self.bottomFrame,
                                         text='Store Ledger',
                                         command=self.storeLedger)
+        self.storeLedgerButton.grid(column=0, row=0, sticky=E+W)
+
+        Separator(self.bottomFrame, orient='horizontal').grid(row=1,
+                                                              sticky=E+W)
+        Label(self.bottomFrame,
+              text='Beancount Import Manager - Version {}'
+                   .format(beancountManager.__version__)).grid(row=2)
 
         self.toggleIntroText()
 
@@ -177,35 +181,43 @@ class FileFrame(Frame):
         self.initUI()
 
     def initUI(self):
+        Grid.columnconfigure(self, 0, weight=1)
+
         self.FilePathEntry = Entry(self)
         self.FilePathEntry.delete(0, END)
         self.FilePathEntry.insert(0, self.fname)
-        self.FilePathEntry.pack(side=LEFT, padx=5, fill=X, expand=1)
+        self.FilePathEntry.grid(row=0, column=0, padx=5, sticky=E+W)
 
         self.csvType = StringVar()
         options = readers.options
         self.typeSelection = OptionMenu(self, self.csvType, *options)
-        self.typeSelection.pack(side=LEFT, padx=5)
+        self.typeSelection.grid(row=0, column=1, padx=5)
 
         self.scanButton = Button(self, text='Import', command=self.importFile)
-        self.scanButton.pack(side=LEFT)
+        self.scanButton.grid(row=0, column=2, padx=5)
 
         self.removeButton = Button(self, text='Remove', command=self.remove)
-        self.removeButton.pack(side=LEFT, padx=5)
+        self.removeButton.grid(row=0, column=3, padx=5)
+
+        self.pbar = Progressbar(self, orient='horizontal', mode='determinate')
+        self.pbar.grid(row=1, columnspan=4, sticky=E+W)
 
     def importFile(self):
         name = self.csvType.get()
         if name != '':
-            converter = getattr(readers, name)(name+'.rules', self.getHelp)
+            converter = getattr(readers, name)(name+'.rules',
+                                               self.getHelp,
+                                               self.ledger,
+                                               self.sess_id)
 
-            self.ledger += converter(self.fname)
+            converter(self.fname, self.pbar)
 
             backup_file_by_sessio_start(self.fname, self.sess_id)
             printer.print_entries(self.ledger)
 
     def getHelp(self, entry):
         helpDialog = GetHelp(self, entry, self.ledger)
-        entry = helpDialog.result
+        entry = helpDialog.entry
         rule = helpDialog.rule
 
         return entry, rule

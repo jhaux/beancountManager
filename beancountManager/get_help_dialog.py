@@ -69,6 +69,20 @@ class GetHelp(Dialog):
                                     row_id)
             row_id += 1
 
+            name = 'tags'
+            self.changes[name] = \
+                self.make_changable(name.title(),
+                                    getattr(self.entry, name),
+                                    row_id)
+            row_id += 1
+
+            name = 'links'
+            self.changes[name] = \
+                self.make_changable(name.title(),
+                                    getattr(self.entry, name),
+                                    row_id)
+            row_id += 1
+
             Label(self.diagFrame, text='Postings').grid(row=row_id,
                                                         columnspan=2)
             row_id += 1
@@ -152,12 +166,34 @@ class GetHelp(Dialog):
 
     def apply(self):
         for attr, value in self.changes.items():
-            if value == '' or value == 'None':
-                value = None
+            if attr == 'tags' or attr == 'links':
+                value = value.get()
+                if ', ' in value:
+                    values = value.split(', ')
+                elif ',' in value:
+                    values = value.split(',')
+                elif ' ' in value:
+                    values = value.split(' ')
+                elif value == '':
+                    values = None
+                else:
+                    values = [value]
+                self.entry = self.entry._replace(**{attr: values})
             elif attr == 'postings':
                 for i, p in enumerate(self.changes['postings']):
                     for p_attr, p_value in p.items():
+                        p_value = p_value.get()
+                        if p_attr == 'account':
+                            p_value \
+                                = ':'.join([a.title() for a
+                                            in p_value.split(':')])
                         if p_value == '' or p_value == 'None':
                             p_value = None
-                        self.entry.postings[i]._replace(**{p_attr: p_value})
-            self.entry._replace(**{attr: value})
+                        self.entry.postings[i]\
+                            = self.entry.postings[i]\
+                            ._replace(**{p_attr: p_value})
+            else:
+                value = value.get()
+                if value == '' or value == 'None':
+                    value = None
+                self.entry = self.entry._replace(**{attr: value})

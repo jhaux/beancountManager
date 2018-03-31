@@ -8,35 +8,76 @@ from beancount.core.number import D
 from beancountManager.referencer import Referencer
 
 
-class VolksbankConverter(object):
+class ConverterBase(object):
 
-    def __init__(self, references, userInputFn, ledger, sess_id='noid'):
+    def __init__(self,
+                 parent_name,
+                 userInputFn,
+                 ledger,
+                 sess_id='noid',
+                 pbar=None):
         '''Sets up the Reader.
 
         Arguments:
-            references: file containing sets of rules to determine the posting
-                    directions (?!)
+            paranet_name: used to find the file containing sets of rules to
+                    determine the posting directions (?!)
             userInputFn: Function, which can be called to correctly format the
                     ledger entry if no rule can be applyed.
                     Has the signature (entry) => (entry)
+            ledger: the list of entries to be updated
             sess_id: unique identifier for backups
+            pbar: ttk Progressbar instance or None
         '''
         self.ledger = ledger
-        self.referencer = Referencer(references, userInputFn, ledger, sess_id)
-        self.sess_id = sess_id
 
-    def __call__(self, csv_file, pbar=None):
-        '''Reads all relevant data in one vb csv file and returns it as a
-        preprocessed ledger class object.
+        rules_file = parent_name + '.rules'
+        self.referencer = Referencer(rules_file, userInputFn, ledger, sess_id)
 
-        Arguments:
-            csv_file: path to the data to be read and converted
+        self.pbar = pbar
 
-        Returns:
-            vb_ledger: ledger object containing all relevant data
-        '''
+    def __call__(self, csv_file):
+        '''Makes a pandas dataframe using read_data and iterates over it,
+        generating ledger entries using step_data and the referencer'''
 
-        self.read_data(csv_file, pbar)
+        df = self.read_data(csv_file)
+
+        for index, row in df.iterrows():
+            entry = self.step_data(index, row)
+            entry = self.referencer(entry)
+
+            self.ledger += entry
+
+            if self.pbar:
+                pbar.step()
+
+        return self.ledger
+
+    def read_data(self, csv_file):
+        '''Generate one pandas frame containing all data and return it'''
+        raise NotImplementedError('This needs to be overwritten')
+
+    def step_data(self, index, row):
+        '''Converts data to a not yet valid beancount core.data entry and
+        return it'''
+        raise NotImplementedError('This needs to be overwritten')
+
+
+
+class VolksbankConverter(ConverterBase):
+
+    def __init__(self,
+                 references,
+                 userInputFn,
+                 ledger,
+                 sess_id='noid',
+                 pbar=None):
+
+        ConverterBase.__init__(self,
+                               self.__name__,
+                               userInputFn,
+                               ledger,
+                               sess_id,
+                               pbar)
 
     def read_data(self, csv_file, pbar=None):
         raw_data = pd.read_csv(csv_file,
@@ -55,11 +96,8 @@ class VolksbankConverter(object):
 
         if pbar:
             pbar['maximum'] = len(raw_data)
-            pbar['maximum'] = 17 - 13
 
         for index, row in raw_data.iterrows():
-            if index < 13:
-                continue
 
             if index > 16:
                 break

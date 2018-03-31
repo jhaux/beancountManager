@@ -210,10 +210,7 @@ class FileFrame(Frame):
                                                self.ledger,
                                                self.sess_id)
 
-            converter(self.fname, self.pbar)
-
             backup_file_by_sessio_start(self.fname, self.sess_id)
-            printer.print_entries(self.ledger)
 
     def getHelp(self, entry):
         helpDialog = GetHelp(self, entry, self.ledger)

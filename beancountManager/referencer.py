@@ -12,6 +12,10 @@ class Referencer(object):
     def __init__(self, rules_file, userInputFn, ledger, session_start='noid'):
         '''Arguments:
             rules_file: path to the file containing the rules
+            userInputFn: callable 'entry => entry, rule', which adds a rule
+                and applies it to the entry
+            ledger: all the data
+            session_start: unique session identifier for backups
         '''
 
         self.ledger = ledger
@@ -29,6 +33,8 @@ class Referencer(object):
                     self.rules.append(Rule(rule))
 
     def __call__(self, entry):
+        ret_list = [entry]
+
         if isinstance(entry, Transaction):
             matchedSomeRule = False
             for rule in self.rules:
@@ -39,12 +45,12 @@ class Referencer(object):
                 entry, rule = self.userInputFn(entry)
                 if rule:
                     self.add_rule(rule)
-        ret_list = [entry]
+            ret_list = [entry]
 
-        for p in entry.postings:
-            if self.is_not_open(p.account):
-                ret_list = [Open(None, entry.date, p.account, None, None)] \
-                    + ret_list
+            for p in entry.postings:
+                if self.is_not_open(p.account):
+                    ret_list = [Open(None, entry.date, p.account, None, None)]\
+                        + ret_list
         return ret_list
 
     def add_rule(self, rule):
@@ -196,7 +202,7 @@ class StringComparison(object):
 
 
 class StringModification(object):
-    options = ['exchange', 'leave']
+    options = ['exchange', 'leave', 'code']
 
     @classmethod
     def exchange(cls, orig, new):
@@ -205,6 +211,16 @@ class StringModification(object):
     @classmethod
     def leave(cls, orig, new):
         return orig
+
+    @classmethod
+    def code(cls, orig, code):
+        try:
+            exec(code, globals(), globals())
+            new_string = modify_string(orig)
+        except Exception as e:
+            print(e)
+            new_string = 'ERROR'
+        return new_string
 
 
 RULES = ['Transaction']

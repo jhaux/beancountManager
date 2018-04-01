@@ -10,6 +10,7 @@ from beancount.parser import printer
 from beancountManager.referencer import StringComparison, StringModification
 from beancountManager.referencer import Rule, RULES
 from beancountManager.util import CustomMenubutton
+from beancountManager.code_dialog import CodeDialog
 
 
 class RuleDialog(Dialog):
@@ -170,9 +171,14 @@ class RuleDialog(Dialog):
         patEntry = Entry(self.diagFrame, textvariable=pattern)
         patEntry.grid(row=row_id, column=2, sticky=W)
 
+        if self.entry and hasattr(self.entry, name):
+            inString = getattr(self.entry, name)
+        else:
+            inString = ''
         chMenu = OptionMenu(self.diagFrame,
                             change,
-                            *StringModification.options)
+                            *StringModification.options,
+                            command=self.possibleDialog(changeTo, inString))
         chMenu.grid(row=row_id, column=3, sticky=W)
 
         if name == 'account':
@@ -216,6 +222,15 @@ class RuleDialog(Dialog):
                 changeTo.set(preVals['changeTo'])
 
         return checkVar, relation, pattern, change, changeTo
+
+    def possibleDialog(self, changeToVariable, inputString):
+        def command(value):
+            if value == 'code':
+                CD = CodeDialog(self, inputString)
+                code = CD.code
+                if code:
+                    changeToVariable.set(code)
+        return command
 
     def getCheckcommand(self, checkVar, settableItems):
         def onOffFn():

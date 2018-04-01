@@ -205,11 +205,12 @@ class FileFrame(Frame):
     def importFile(self):
         name = self.csvType.get()
         if name != '':
-            converter = getattr(readers, name)(name+'.rules',
-                                               self.getHelp,
+            converter = getattr(readers, name)(self.getHelp,
                                                self.ledger,
-                                               self.sess_id)
+                                               self.sess_id,
+                                               self.pbar)
 
+            converter(self.fname)
             backup_file_by_sessio_start(self.fname, self.sess_id)
 
     def getHelp(self, entry):

@@ -9,12 +9,13 @@ folder_content = os.listdir(path)
 
 all_py_scripts = []
 for content in folder_content:
-    if content[-3:] == '.py' and '__' not in content:
+    if content[-3:] == '.py' and '__' not in content and 'base' not in content:
         all_py_scripts.append(content)
 
 options = []
 
 for script in all_py_scripts:
+
     name = script.split('_')[0].title()
     module = importlib.import_module('.'+script[:-3],
                                      package='beancountManager.readers')

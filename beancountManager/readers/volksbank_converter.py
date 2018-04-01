@@ -31,9 +31,6 @@ class VolksbankConverter(ConverterBase):
         return raw_data
 
     def step_data(self, index, row):
-        if index > 16:
-            return None
-
         fr = row['from']
         to = row['to']
         narr = row['description'].replace('\n', '')
@@ -68,6 +65,10 @@ class VolksbankConverter(ConverterBase):
                                 None,  # links
                                 postings)  # postings
 
-        tract = self.referencer(raw_tract)
+        return raw_tract
 
-        return tract
+    def get_in_balance(self):
+        return None
+
+    def get_out_balance(self):
+        return None

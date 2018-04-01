@@ -1,4 +1,5 @@
 import os
+import pandas as pd
 
 from beancountManager.referencer import Referencer
 
@@ -34,9 +35,15 @@ class ConverterBase(object):
         generating ledger entries using step_data and the referencer'''
 
         df = self.read_data(csv_file)
+        assert isinstance(df, pd.DataFrame), \
+            'Data must be read in as pandas.DataFrame but is ' + type(df)
 
-        if pbar:
-            pbar['maximum'] = len(df)
+        if self.pbar:
+            self.pbar['maximum'] = len(df)
+
+        in_balance = self.get_in_balance()
+        if in_balance:
+            self.ledger += [in_balance]
 
         for index, row in df.iterrows():
             entry = self.step_data(index, row)
@@ -45,7 +52,11 @@ class ConverterBase(object):
             self.ledger += entry
 
             if self.pbar:
-                pbar.step()
+                self.pbar.step()
+
+        out_balance = self.get_out_balance()
+        if out_balance:
+            self.ledger += [out_balance]
 
         return self.ledger
 
@@ -57,3 +68,13 @@ class ConverterBase(object):
         '''Converts data to a not yet valid beancount core.data entry and
         return it'''
         raise NotImplementedError('This needs to be overwritten')
+
+    def get_in_balance(self):
+        '''Optional method: get an entry, which places a balance statement.'''
+
+        return None
+
+    def get_out_balance(self):
+        '''Optional method: get an entry, which places a balance statement.'''
+
+        return None

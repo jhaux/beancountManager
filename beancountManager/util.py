@@ -49,6 +49,21 @@ def backup_file_by_sessio_start(filepath, session_start):
         copyfile(filepath, backup_name)
 
 
+def str2dict(string):
+
+    string = string.strip('{')
+    string = string.strip('}')
+
+    entries = string.split(', ')
+
+    d = {}
+    for e in entries:
+        k, v = e.split(': ')
+        d[k] = v
+
+    return d
+
+
 class CustomMenubutton(Menubutton):
     def __init__(self, parent, ledger, entry, **kwargs):
         self.entry = entry  # Current entry for which this menu is created

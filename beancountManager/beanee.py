@@ -127,6 +127,17 @@ class Beanee(Frame):
     def storeLedger(self):
         backup_file_by_sessio_start(self.ledgerPath, self.session_start)
 
+        def key(entry):
+            tp = type(entry).__name__
+
+            primary = entry.date
+            secondary = 0 if tp == 'Open' else 1 if tp == 'Balance' else 2
+
+            return primary, secondary
+
+        self.ledger = sorted(self.ledger,
+                             key=key)
+
         with open(self.ledgerPath, 'w+') as ledgerFile:
             printer.print_entries(self.ledger, file=ledgerFile)
 

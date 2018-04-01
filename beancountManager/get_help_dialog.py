@@ -10,7 +10,7 @@ from beancount.parser import printer
 from beancount.core.realization import realize
 
 from beancountManager.rule_dialog import RuleDialog
-from beancountManager.util import CustomMenubutton
+from beancountManager.util import CustomMenubutton, str2dict
 
 
 class GetHelp(Dialog):
@@ -179,6 +179,9 @@ class GetHelp(Dialog):
                 else:
                     values = [value]
                 self.entry = self.entry._replace(**{attr: values})
+            elif attr == 'meta' and value != '':
+                value = str2dict(value.get())
+                self.entry = self.entry._replace(**{attr: value})
             elif attr == 'postings':
                 for i, p in enumerate(self.changes['postings']):
                     for p_attr, p_value in p.items():

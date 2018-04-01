@@ -1,4 +1,5 @@
 import json
+import os
 
 from beancount.core.data import Transaction, Open
 
@@ -18,12 +19,14 @@ class Referencer(object):
         self.rules_file = rules_file
         self.userInputFn = userInputFn
         self.rules = []
+        self.rule_dicts = []
         self.session_start = session_start
 
-        with open(rules_file, 'r') as the_file:
-            self.rule_dicts = json.load(the_file)
-            for rule in self.rule_dicts:
-                self.rules.append(Rule(rule))
+        if os.path.isfile(self.rules_file):
+            with open(rules_file, 'r') as the_file:
+                self.rule_dicts = json.load(the_file)
+                for rule in self.rule_dicts:
+                    self.rules.append(Rule(rule))
 
     def __call__(self, entry):
         if isinstance(entry, Transaction):

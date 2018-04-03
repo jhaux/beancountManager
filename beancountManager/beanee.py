@@ -221,6 +221,7 @@ class FileFrame(Frame):
                                                self.sess_id,
                                                self.pbar)
 
+            self.fname = self.FilePathEntry.get()
             converter(self.fname)
             backup_file_by_sessio_start(self.fname, self.sess_id)
 

@@ -1,3 +1,5 @@
+import copy
+
 from tkinter import Frame, Tk, BOTH, Label, Button, Entry, END
 from tkinter import Menu, OptionMenu, StringVar, Menubutton
 from tkinter import SUNKEN
@@ -10,7 +12,7 @@ from beancount.parser import printer
 from beancount.core.realization import realize
 
 from beancountManager.rule_dialog import RuleDialog
-from beancountManager.util import CustomMenubutton, str2dict
+from beancountManager.util import CustomMenubutton, str2dict, validate_entry
 
 
 class GetHelp(Dialog):
@@ -164,6 +166,16 @@ class GetHelp(Dialog):
 
         return textContainer
 
+    def validate(self):
+        backup_entry = copy.deepcopy(self.entry)
+        self.apply()
+
+        is_valid = validate_entry(self.entry)
+
+        self.entry = backup_entry
+
+        return is_valid
+
     def apply(self):
         for attr, value in self.changes.items():
             if attr == 'tags' or attr == 'links':
@@ -186,10 +198,6 @@ class GetHelp(Dialog):
                 for i, p in enumerate(self.changes['postings']):
                     for p_attr, p_value in p.items():
                         p_value = p_value.get()
-                        if p_attr == 'account':
-                            p_value \
-                                = ':'.join([a.title() for a
-                                            in p_value.split(':')])
                         if p_value == '' or p_value == 'None':
                             p_value = None
                         self.entry.postings[i]\

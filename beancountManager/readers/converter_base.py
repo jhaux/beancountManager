@@ -45,7 +45,8 @@ class ConverterBase(object):
         if in_balance:
             self.ledger += [in_balance]
 
-        for index, row in df.iterrows():
+        for index, row in df[::-1].iterrows():
+
             entry = self.step_data(index, row)
             entry = self.referencer(entry)
 

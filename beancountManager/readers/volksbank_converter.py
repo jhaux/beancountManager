@@ -14,7 +14,7 @@ class VolksbankConverter(ConverterBase):
     def read_data(self, csv_file):
         self.csv_file = csv_file
 
-        self.meta = {'file': self.csv_file}
+        self.meta = {'filename': self.csv_file}
         self.kto = csv_file.split('_')[1]
 
         raw_data = pd.read_csv(csv_file,
@@ -52,6 +52,8 @@ class VolksbankConverter(ConverterBase):
         return raw_data
 
     def step_data(self, index, row):
+        self.meta['lineno'] = index + 13
+
         fr = row['from']
         to = row['to']
         narr = row['description'].replace('\n', '')

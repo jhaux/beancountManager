@@ -7,7 +7,11 @@ import os
 from shutil import copyfile
 
 from beancount.core.realization import realize
-from beancount.core.data import Open
+from beancount.core.data import Open, Transaction, sanity_check_types
+
+
+VALID_CHARS = 'abcdefghijklmnopqrstuvwxyz:ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+VALID_CHARS += '1234567890'
 
 
 class LeTestApp(Frame):
@@ -29,6 +33,46 @@ class LeTestApp(Frame):
         self.mb.pack()
 
         self.mb.refresh()
+
+
+def is_valid_account(account):
+    is_valid = True
+
+    if account == '':
+        return is_valid
+
+    # Test for not allowed chracters
+    for c in account:
+        if c not in VALID_CHARS:
+            print('Unallowed character \'{}\' in account {}'
+                  .format(c, account))
+            is_valid = False
+
+    # Test that all branches are starting with a capital letter
+    for name in account.split(':'):
+        if not name[0].isupper():
+            print('Must start uppercase: {}'.format(name))
+            is_valid = False
+
+    return is_valid
+
+
+def validate_entry(entry):
+    is_valid = True
+
+    # Use builtin data type checks
+    try:
+        sanity_check_types(entry, allow_none_for_tags_and_links=True)
+    except AssertionError as e:
+        print(e)
+        is_valid = False
+
+    if isinstance(entry, Transaction):
+        # Test account names for correctness
+        for p in entry.postings:
+            is_valid = is_valid and is_valid_account(p.account)
+
+    return is_valid
 
 
 def backup_file_by_sessio_start(filepath, session_start):
@@ -59,9 +103,37 @@ def str2dict(string):
     d = {}
     for e in entries:
         k, v = e.split(': ')
-        d[k] = v
+        d[k.strip('\'')] = v.strip('\'')
 
     return d
+
+
+def print_dict(le_dict, sort_keys=True, indent=4):
+    def do_stuff(item, indentation=''):
+        if isinstance(item, dict):
+            rec_d(item, indentation)
+        elif isinstance(item, list):
+            rec_l(item, indentation)
+        else:
+            print(indentation + str(item))
+
+    def rec_l(sub_list, indentation=''):
+        new_indent = indentation + ' '*indent
+        for i in sub_list:
+            do_stuff(i, new_indent)
+
+    def rec_d(subDict, indentation=''):
+        new_indent = indentation + ' '*indent
+
+        keys = list(subDict.keys())
+        if sort_keys:
+            keys = sorted(keys)
+        for k in keys:
+            v = subDict[k]
+            print(indentation + str(k) + ':')
+            do_stuff(v, new_indent)
+
+    do_stuff(le_dict)
 
 
 class CustomMenubutton(Menubutton):
@@ -94,6 +166,9 @@ class CustomMenubutton(Menubutton):
                                    jointString=js,
                                    menu=subMenu)
                 menu.add_cascade(label=k, menu=subMenu)
+            menu.add_radiobutton(label='select',
+                                 variable=self.tv,
+                                 value=jointString)
             self.add_add(menu, jointString)
         else:
             menu.add_radiobutton(label='select',
@@ -110,6 +185,11 @@ class CustomMenubutton(Menubutton):
         def askForString():
             ret = simpledialog.askstring('Enter the new Field',
                                          'I said ENTEEER')
+            # If ret is None, cancle has been pressed
+            while ret and not is_valid_account(ret):
+                ret = simpledialog.askstring('Enter the new Field',
+                                             'I said ENTEEER')
+
             if ret:
                 ret = ':'.join([fallbackString, ret]) if fallbackString \
                                                       else ret

@@ -1,3 +1,6 @@
+import copy
+import json
+
 from tkinter import Frame, BOTH, Label, Entry, Checkbutton
 from tkinter import OptionMenu, StringVar, IntVar
 from tkinter import SUNKEN
@@ -9,7 +12,7 @@ from beancount.core.data import Transaction
 from beancount.parser import printer
 from beancountManager.referencer import StringComparison, StringModification
 from beancountManager.referencer import Rule, RULES
-from beancountManager.util import CustomMenubutton
+from beancountManager.util import CustomMenubutton, validate_entry, print_dict
 from beancountManager.code_dialog import CodeDialog
 
 
@@ -239,32 +242,58 @@ class RuleDialog(Dialog):
                 item['state'] = 'normal' if isOn else 'disabled'
         return onOffFn
 
-    def recursiveGetNewRule(self, ruleDict):
+    def recursiveGetNewRule(self, ruleDict, writeDict):
         for k, v in list(ruleDict.items()):
             if isinstance(v, (dict, OrderedDict)) \
                     or k == 'postings':
                 if k == 'postings':
                     for i, p in enumerate(v):
-                        p = self.recursiveGetNewRule(p)
-                        v[i] = p
+                        p = self.recursiveGetNewRule(p, writeDict[k][i])
+                        writeDict[k][i] = p
                 else:
-                        v = self.recursiveGetNewRule(v)
+                        writeDict[k] = self.recursiveGetNewRule(v, writeDict[k])
             elif isinstance(v, list):
                 if v[0].get():
                     v = [v[1].get(), v[2].get(), v[3].get(), v[4].get()]
-                    ruleDict[k] = v
+                    writeDict[k] = v
                 else:
-                    del ruleDict[k]
+                    del writeDict[k]
             if isinstance(v, (dict, OrderedDict)) and len(v) == 0:
-                del(ruleDict[k])
-        return ruleDict
+                del(writeDict[k])
+        return writeDict
 
     def getNewRule(self):
-        self.newRule = newRule = self.recursiveGetNewRule(self.newRule)
+        newRule = self.recursiveGetNewRule(self.newRule,
+                                           getProtoRule(self.kind))
         return newRule
+
+    def validate(self):
+        is_valid = True
+
+        backup_rule = None
+        if self.rule:
+            print('has rule')
+            backup_rule = copy.deepcopy(self.rule)
+
+        if self.entry:
+            print('has entry')
+            backup_entry = copy.deepcopy(self.entry)
+            self.apply()
+            is_valid = validate_entry(self.entry)
+
+            self.entry = backup_entry
+
+        if backup_rule:
+            self.rule = backup_rule
+
+        print('This rule produces a{}valid entry'
+              .format(' ' if is_valid else 'n in'))
+        return is_valid
 
     def apply(self):
         newRuleDict = self.getNewRule()
+        print_dict(newRuleDict)
+
         self.rule = newRuleDict
         newRule = Rule(newRuleDict)
         if self.entry:

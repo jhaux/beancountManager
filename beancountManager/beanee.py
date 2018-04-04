@@ -138,8 +138,15 @@ class Beanee(Frame):
         self.ledger = sorted(self.ledger,
                              key=key)
 
+        self.ledger = self.deduplicate(self.ledger)
+
         with open(self.ledgerPath, 'w+') as ledgerFile:
+            ledgerFile.write('option "title" "J\'s Beancount file"\n'
+                             'option "operating_currency" "EUR"\n')
             printer.print_entries(self.ledger, file=ledgerFile)
+
+    def deduplicate(self, ledger):
+        return ledger
 
     def addFile(self):
 
@@ -150,7 +157,9 @@ class Beanee(Frame):
                            filename,
                            self.openFiles,
                            receive=self.sendDestroy,
-                           ledger=self.ledger)
+                           ledger=self.ledger,
+                           saveFn=self.storeLedger,
+                           sess_id=self.session_start)
             ff.grid(row=self.openFiles - 1, sticky=W+E)
             self.fileFrames.append(ff)
 
@@ -178,12 +187,20 @@ class Beanee(Frame):
 
 class FileFrame(Frame):
 
-    def __init__(self, parent, fname, index, receive, ledger, sess_id='noid'):
+    def __init__(self,
+                 parent,
+                 fname,
+                 index,
+                 receive,
+                 ledger,
+                 saveFn,
+                 sess_id='noid'):
         Frame.__init__(self, parent)
         self.parent = parent
         self.sess_id = sess_id
 
         self.ledger = ledger
+        self.saveFn = saveFn
 
         self.fname = fname
         self.index = index
@@ -218,6 +235,7 @@ class FileFrame(Frame):
         if name != '':
             converter = getattr(readers, name)(self.getHelp,
                                                self.ledger,
+                                               self.saveFn,
                                                self.sess_id,
                                                self.pbar)
 
@@ -225,8 +243,8 @@ class FileFrame(Frame):
             converter(self.fname)
             backup_file_by_sessio_start(self.fname, self.sess_id)
 
-    def getHelp(self, entry):
-        helpDialog = GetHelp(self, entry, self.ledger)
+    def getHelp(self, entry, possible_duplicate=None):
+        helpDialog = GetHelp(self, entry, self.ledger, possible_duplicate)
         entry = helpDialog.entry
         rule = helpDialog.rule
 

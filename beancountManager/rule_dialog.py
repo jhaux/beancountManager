@@ -35,7 +35,7 @@ class RuleDialog(Dialog):
         self.kind = None if not entry else type(entry).__name__
         self.kind = self.kind if not rule else rule['kind']
 
-        self.newRule = getProtoRule(self.kind)
+        self.newRule = getProtoRule(self.kind, self.entry)
 
         self.mode = 'edit' if rule is not None else 'add'
 
@@ -264,7 +264,7 @@ class RuleDialog(Dialog):
 
     def getNewRule(self):
         newRule = self.recursiveGetNewRule(self.newRule,
-                                           getProtoRule(self.kind))
+                                           getProtoRule(self.kind, self.entry))
         return newRule
 
     def validate(self):
@@ -301,7 +301,7 @@ class RuleDialog(Dialog):
                 self.entry = newRule.apply(self.entry)
 
 
-def getProtoRule(kind):
+def getProtoRule(kind, entry=None):
     kind = kind if kind else 'Transaction'
     rule = OrderedDict()
 
@@ -313,21 +313,19 @@ def getProtoRule(kind):
         rule['links'] = None
         rule['postings'] = []
 
-        emptyPosting = OrderedDict()
-        emptyPosting['flag'] = None
-        emptyPosting['account'] = None
-        emptyPosting['units'] = OrderedDict()
-        emptyPosting['units']['number'] = None
-        emptyPosting['units']['currency'] = None
+        if entry and isinstance(entry, Transaction):
+            n_postings = len(entry.postings)
+        else:
+            n_postings = 2
 
-        rule['postings'].append(emptyPosting)
+        for i in range(n_postings):
+            emptyPosting = OrderedDict()
+            emptyPosting['flag'] = None
+            emptyPosting['account'] = None
+            emptyPosting['units'] = OrderedDict()
+            emptyPosting['units']['number'] = None
+            emptyPosting['units']['currency'] = None
 
-        emptyPosting = OrderedDict()
-        emptyPosting['flag'] = None
-        emptyPosting['account'] = None
-        emptyPosting['units'] = OrderedDict()
-        emptyPosting['units']['number'] = None
-        emptyPosting['units']['currency'] = None
-        rule['postings'].append(emptyPosting)
+            rule['postings'].append(emptyPosting)
 
     return {'kind': kind, 'rule': rule}

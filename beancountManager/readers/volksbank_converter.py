@@ -7,6 +7,7 @@ from beancount.core.amount import Amount, NULL_AMOUNT
 from beancount.core.number import D
 
 from beancountManager.readers.converter_base import ConverterBase
+from beancountManager import data
 
 
 class VolksbankConverter(ConverterBase):
@@ -14,7 +15,7 @@ class VolksbankConverter(ConverterBase):
     def read_data(self, csv_file):
         self.csv_file = csv_file
 
-        self.meta = {'filename': self.csv_file}
+        self.meta = {data.FNAME_KEY: self.csv_file}
         self.kto = csv_file.split('_')[1]
 
         raw_data = pd.read_csv(csv_file,
@@ -52,7 +53,8 @@ class VolksbankConverter(ConverterBase):
         return raw_data
 
     def step_data(self, index, row):
-        self.meta['lineno'] = index + 13
+        meta = dict(self.meta)
+        meta[data.LINENO_KEY] = str(index + 14)
 
         fr = row['from']
         to = row['to']
@@ -79,7 +81,7 @@ class VolksbankConverter(ConverterBase):
 
         postings = [post_from, post_to]
 
-        raw_tract = Transaction(self.meta,  # meta (optional)
+        raw_tract = Transaction(meta,  # meta (optional)
                                 date,  # date
                                 '*',  # flag
                                 None,  # payee (optional)

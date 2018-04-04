@@ -9,6 +9,7 @@ class ConverterBase(object):
     def __init__(self,
                  userInputFn,
                  ledger,
+                 saveFn,
                  sess_id='noid',
                  pbar=None):
         '''Sets up the Reader.
@@ -22,6 +23,7 @@ class ConverterBase(object):
             pbar: ttk Progressbar instance or None
         '''
         self.ledger = ledger
+        self.saveFn = saveFn
 
         rules_file = type(self).__name__ + '.rules'
         rules_path = '/'.join(os.path.realpath(__file__).split('/')[:-1])

@@ -35,6 +35,10 @@ class LeTestApp(Frame):
         self.mb.refresh()
 
 
+def german2usNumber(string_num):
+    return string_num.replace('.', '').replace(',', '.')
+
+
 def is_valid_account(account):
     is_valid = True
 
@@ -64,8 +68,13 @@ def validate_entry(entry):
     try:
         sanity_check_types(entry, allow_none_for_tags_and_links=True)
     except AssertionError as e:
-        print(e)
-        is_valid = False
+        if str(e) == 'Missing filename in metadata':
+            pass
+        elif str(e) == 'Missing lineno in metadata':
+            pass
+        else:
+            print(e)
+            is_valid = False
 
     if isinstance(entry, Transaction):
         # Test account names for correctness
@@ -89,7 +98,7 @@ def backup_file_by_sessio_start(filepath, session_start):
     newpath = '/'.join(names)
 
     backup_name = '{}.bak.{}'.format(newpath, session_start)
-    if not os.path.isfile(backup_name):
+    if not os.path.isfile(backup_name) and os.path.isfile(filepath):
         copyfile(filepath, backup_name)
 
 

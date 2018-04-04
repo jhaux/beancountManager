@@ -21,9 +21,11 @@ class GetHelp(Dialog):
                  parent,
                  entry,
                  ledger,
+                 possible_duplicate=None,
                  title='Get some Help!',
                  sess_id='noid'):
         self.entry = entry
+        self.duplicate = possible_duplicate
         self.ledger = ledger
 
         self.sess_id = sess_id
@@ -57,6 +59,13 @@ class GetHelp(Dialog):
                   text='Transaction Attributes').grid(row=row_id,
                                                       columnspan=2)
             row_id += 1
+            name = 'payee'
+            self.changes[name] = \
+                self.make_changable(name.title(),
+                                    getattr(self.entry, name),
+                                    row_id)
+            row_id += 1
+
             name = 'narration'
             self.changes[name] = \
                 self.make_changable(name.title(),
@@ -118,8 +127,9 @@ class GetHelp(Dialog):
 
     def refresh(self):
         if self.changes:
+            source = self.entry if not self.duplicate else self.duplicate
             for name, var in self.changes.items():
-                value = getattr(self.entry, name)
+                value = getattr(source, name)
                 if not name == 'postings':
                     if value is not None:
                         var.set(value)

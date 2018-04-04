@@ -3,7 +3,9 @@ import os
 
 from beancount.core.data import Transaction, Open
 
+from beancountManager import data
 from beancountManager.util import backup_file_by_sessio_start
+from beancountManager.comparators import SameAmountComparator
 
 
 class Referencer(object):
@@ -25,6 +27,8 @@ class Referencer(object):
         self.rules = []
         self.rule_dicts = []
         self.session_start = session_start
+
+        self.comparator = SameAmountComparator(max_date_delta=3)
 
         if os.path.isfile(self.rules_file):
             with open(rules_file, 'r') as the_file:
@@ -49,7 +53,8 @@ class Referencer(object):
 
             for p in entry.postings:
                 if self.is_not_open(p.account):
-                    ret_list = [Open(None, entry.date, p.account, None, None)]\
+                    ret_list = [Open(None, data.EXP_OPEN_DATE,
+                                     p.account, None, None)]\
                         + ret_list
         return ret_list
 
@@ -95,6 +100,8 @@ class Rule(object):
                     result = result and success
                 else:
                     postings = entry.postings
+                    if len(postings) != len(v):
+                        return False
                     for idx, p in enumerate(v):
                         for pk, pv in p.items():
                             if pk == 'units':
@@ -216,7 +223,7 @@ class StringModification(object):
     def code(cls, orig, code):
         try:
             exec(code, globals(), globals())
-            new_string = modify_string(orig)
+            new_string = modify_string(orig)  # noqa
         except Exception as e:
             print(e)
             new_string = 'ERROR'

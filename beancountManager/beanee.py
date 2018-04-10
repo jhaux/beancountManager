@@ -140,9 +140,10 @@ class Beanee(Frame):
 
         self.ledger = self.deduplicate(self.ledger)
 
+        self.ledgerPath = self.ledgerVar.get()
         with open(self.ledgerPath, 'w+') as ledgerFile:
             ledgerFile.write('option "title" "J\'s Beancount file"\n'
-                             'option "operating_currency" "EUR"\n')
+                             'option "operating_currency" "EUR"\n\n')
             printer.print_entries(self.ledger, file=ledgerFile)
 
     def deduplicate(self, ledger):

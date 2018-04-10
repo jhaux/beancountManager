@@ -1,5 +1,6 @@
 import json
 import os
+import datetime
 
 from beancount.core.data import Transaction, Open
 
@@ -37,7 +38,7 @@ class Referencer(object):
                     self.rules.append(Rule(rule))
 
     def __call__(self, entry):
-        ret_list = [entry]
+        opens = []
 
         if isinstance(entry, Transaction):
             matchedSomeRule = False
@@ -49,14 +50,15 @@ class Referencer(object):
                 entry, rule = self.userInputFn(entry)
                 if rule:
                     self.add_rule(rule)
-            ret_list = [entry]
 
             for p in entry.postings:
-                if self.is_not_open(p.account):
-                    ret_list = [Open(None, data.EXP_OPEN_DATE,
-                                     p.account, None, None)]\
-                        + ret_list
-        return ret_list
+                if self.is_not_open(p.account, entry.date):
+                    opens.append(Open(None,
+                                      data.EXP_OPEN_DATE,
+                                      p.account,
+                                      None,
+                                      None))
+        return entry, opens
 
     def add_rule(self, rule):
         if rule not in self.rule_dicts:
@@ -72,11 +74,14 @@ class Referencer(object):
                                       indent=4,
                                       sort_keys=True))
 
-    def is_not_open(self, account):
+    def is_not_open(self, account, date):
         isOpen = False
         for e in self.ledger:
             if isinstance(e, Open):
                 isOpen = isOpen or e.account == account
+                if isinstance(e.date, datetime.datetime) \
+                        and isinstance(date, datetime.datetime):
+                    isOpen = isOpen or e.date < date
         return not isOpen
 
 

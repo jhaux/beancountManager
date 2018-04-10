@@ -2,6 +2,7 @@ import os
 import pandas as pd
 
 from beancountManager.referencer import Referencer
+from beancountManager.deduplicate import DeduplicateIngester
 
 
 class ConverterBase(object):
@@ -29,6 +30,7 @@ class ConverterBase(object):
         rules_path = '/'.join(os.path.realpath(__file__).split('/')[:-1])
         rules_path = os.path.join(rules_path, rules_file)
         self.referencer = Referencer(rules_path, userInputFn, ledger, sess_id)
+        self.ingester = DeduplicateIngester(ledger)
 
         self.pbar = pbar
 
@@ -50,9 +52,11 @@ class ConverterBase(object):
         for index, row in df[::-1].iterrows():
 
             entry = self.step_data(index, row)
-            entry = self.referencer(entry)
 
-            self.ledger += entry
+            if entry is not None and self.ingester.is_no_duplicate(entry):
+                entry, opens = self.referencer(entry)
+                self.ledger = self.ingester.ingest(entry)
+                self.ledger += opens
 
             if self.pbar:
                 self.pbar.step()

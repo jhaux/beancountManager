@@ -9,6 +9,8 @@ from shutil import copyfile
 from beancount.core.realization import realize
 from beancount.core.data import Open, Transaction, sanity_check_types
 
+from beancountManager import data
+
 
 VALID_CHARS = 'abcdefghijklmnopqrstuvwxyz:ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 VALID_CHARS += '1234567890'
@@ -210,7 +212,7 @@ class CustomMenubutton(Menubutton):
 
     def addEntry(self, account, entry):
 
-        date = entry.date
+        date = data.EXP_OPEN_DATE
         opendir = Open(None, date, account, None, None)
 
         self.ledger += [opendir]

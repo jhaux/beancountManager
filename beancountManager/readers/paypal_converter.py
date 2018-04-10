@@ -74,11 +74,20 @@ class PaypalConverter(ConverterBase):
         self.date_in = df['Datum'][0]
         self.date_in = datetime.date(*[int(d) for d
                                        in self.date_in.split('.')[::-1]])
-        self.balance_in = D(german2usNumber(df['Guthaben'][0]))
+        self.balance_in = D(str(float(german2usNumber(df['Guthaben'][0]))
+                                - float(german2usNumber(df['Netto'][0]))))
+
+        self.old_balance = -12333415.123
 
         return df[::-1]
 
     def step_data(self, index, row):
+
+        balance = float(german2usNumber(row['Guthaben']))
+        if balance != self.old_balance:
+            self.old_balance = balance
+        else:
+            return None
 
         meta = dict(self.meta)
         meta[data.LINENO_KEY] = str(index + 2)

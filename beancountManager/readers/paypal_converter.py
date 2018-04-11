@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import datetime
+from collections import OrderedDict
 
 from beancount.core.data import Balance, Posting, Transaction
 from beancount.core.amount import Amount
@@ -83,12 +84,14 @@ class PaypalConverter(ConverterBase):
 
     def step_data(self, index, row):
 
+        # Test if this entry does anything
         balance = float(german2usNumber(row['Guthaben']))
         if balance != self.old_balance:
             self.old_balance = balance
         else:
             return None
 
+        # All data
         meta = dict(self.meta)
         meta[data.LINENO_KEY] = str(index + 2)
 
@@ -96,52 +99,45 @@ class PaypalConverter(ConverterBase):
         date = datetime.date(*[int(d) for d in date.split('.')[::-1]])
 
         fr = row['Absender E-Mail-Adresse']
-        to_geb = 'Expenses:PayPal:Gebuehren'
         to = row['Empfänger E-Mail-Adresse']
-
-        sign = 1 if fr == 'johannes.haux@gmx.de' else -1
-        inv_sign = -1 * sign
-
-        fr = 'Assets:PayPal' if fr == 'johannes.haux@gmx.de' else fr
-        to = 'Assets:PayPal' if to == 'johannes.haux@gmx.de' else to
+        other_account = fr if fr != 'johannes.haux@gmx.de' else to
 
         payee = row['Name'] if row['Name'] != 'EMPTY' else None
         narr = row['Typ']
 
         curr = row['Währung']
 
+        # Amounts
         brutto = float(german2usNumber(row['Brutto']))
-        post_from = Posting(fr,  # Account
-                            Amount(D(str(sign*brutto)), curr),  # units
-                            None,  # cost
-                            None,  # price
-                            None,  # flag
-                            None)  # meta
-        postings = [post_from]
 
         gebuhr = row['Gebühr']
         if gebuhr != 'EMPTY' and gebuhr != '0,00':
-            gebuhr = float(german2usNumber(gebuhr))
-            post_gebu = Posting(to_geb,  # Account
-                                Amount(D(str(sign*gebuhr)), curr),  # unit
-                                None,  # cost
-                                None,  # price
-                                None,  # flag
-                                None)  # meta
-            postings += [post_gebu]
+            gebuhr = -float(german2usNumber(gebuhr))
+        else:
+            gebuhr = None
 
         netto = row['Netto']
         if netto == 'EMPTY':
             netto = brutto
         else:
             netto = float(german2usNumber(netto))
-        post_to = Posting(to,  # Account
-                          Amount(D(str(inv_sign*netto)), curr),  # units
-                          None,  # cost
-                          None,  # price
-                          None,  # flag
-                          None)  # meta
-        postings += [post_to]
+
+        # Generate Postings in ordered fashion
+        postings_map = OrderedDict()
+        postings_map['Assets:PayPal'] = netto
+        postings_map['Expenses:PayPal:Gebuehren'] = gebuhr
+        postings_map[other_account] = -brutto
+
+        postings = []
+        for account, number in postings_map.items():
+            if number is not None:
+                p = Posting(account,
+                            Amount(D(str(number)), curr),
+                            None,
+                            None,
+                            None,
+                            None)
+                postings.append(p)
 
         raw_tract = Transaction(meta,  # meta (optional)
                                 date,  # date

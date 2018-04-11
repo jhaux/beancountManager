@@ -16,11 +16,11 @@ def find_and_delete_duplicates(l):
                 l.remove(d)
 
     for e1 in l:
-        U = UmbuchungsComparator(datetime.timedelta(6))
+        U = UmbuchungsComparator(datetime.timedelta(14))
         duplicates_umbuchung = similar.find_similar_entries([e1],
                                                             l,
                                                             comparator=U,
-                                                            window_days=4)
+                                                            window_days=14)
         for s, d in duplicates_umbuchung:
             print(id(d))
             printer.print_entries([d])
@@ -55,7 +55,7 @@ class UmbuchungsComparator(object):
                 if len(a1 & a2) != len(entry1.postings):
                     return False
 
-                # Are all postings to or from Assets?
+                # Are all postings to or from Assets and of same size?
                 for a in a1 | a2:
                     if 'Assets:' not in a:
                         return False
@@ -121,7 +121,7 @@ class DeduplicateIngester(object):
 
     def __init__(self, ledger):
         self.ledger = ledger
-        self.U = UmbuchungsComparator(datetime.timedelta(6))
+        self.U = UmbuchungsComparator(datetime.timedelta(14))
         self.D = DuplicateComparator(datetime.timedelta(1))
 
     def ingest(self, entry):
@@ -140,7 +140,7 @@ class DeduplicateIngester(object):
         duplicates_um = similar.find_similar_entries([entry],
                                                      self.ledger,
                                                      comparator=self.U,
-                                                     window_days=4)
+                                                     window_days=14)
 
         if len(duplicates_um) == 0:
             return False

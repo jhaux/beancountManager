@@ -37,6 +37,15 @@ class LeTestApp(Frame):
         self.mb.refresh()
 
 
+def identifyImportType(filename):
+    if 'Umsaetze_DE0227092555' in filename:
+        return data.filetypes.VOLKSBANK
+    elif 'Umsaetze_Paypal' in filename:
+        return data.filetypes.PAYPAL
+    else:
+        return None
+
+
 def german2usNumber(string_num):
     return string_num.replace('.', '').replace(',', '.')
 

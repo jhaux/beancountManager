@@ -12,7 +12,8 @@ class ConverterBase(object):
                  ledger,
                  saveFn,
                  sess_id='noid',
-                 pbar=None):
+                 pbar=None,
+                 balance_at_interval=None):
         '''Sets up the Reader.
 
         Arguments:
@@ -22,6 +23,8 @@ class ConverterBase(object):
             ledger: the list of entries to be updated
             sess_id: unique identifier for backups
             pbar: ttk Progressbar instance or None
+            balance_at_interval: Step at which a balance statement is tried to
+                    be received. Ignored if None.
         '''
         self.ledger = ledger
         self.saveFn = saveFn
@@ -31,6 +34,8 @@ class ConverterBase(object):
         rules_path = os.path.join(rules_path, rules_file)
         self.referencer = Referencer(rules_path, userInputFn, ledger, sess_id)
         self.ingester = DeduplicateIngester(ledger)
+
+        self.balance_at_interval = balance_at_interval
 
         self.pbar = pbar
 
@@ -50,6 +55,12 @@ class ConverterBase(object):
             self.ledger += [in_balance]
 
         for index, row in df[::-1].iterrows():
+
+            if self.balance_at_interval is not None \
+                    and index % self.balance_at_interval == 0:
+                balance = self.get_balance_at_step(index)
+                if balance:
+                    self.ledger += [balance]
 
             entry = self.step_data(index, row)
 
@@ -82,6 +93,11 @@ class ConverterBase(object):
         return None
 
     def get_out_balance(self):
+        '''Optional method: get an entry, which places a balance statement.'''
+
+        return None
+
+    def get_balance_at_step(self, index):
         '''Optional method: get an entry, which places a balance statement.'''
 
         return None

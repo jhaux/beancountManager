@@ -13,6 +13,7 @@ import beancountManager
 from beancountManager import readers
 from beancountManager.get_help_dialog import GetHelp
 from beancountManager.util import backup_file_by_sessio_start
+from beancountManager.util import identifyImportType
 
 
 class Beanee(Frame):
@@ -217,8 +218,15 @@ class FileFrame(Frame):
         self.FilePathEntry.insert(0, self.fname)
         self.FilePathEntry.grid(row=0, column=0, padx=5, sticky=E+W)
 
-        self.csvType = StringVar()
         options = readers.options
+        self.csvType = StringVar()
+
+        ftype = identifyImportType(self.fname)
+        print(ftype)
+        if ftype is not None:
+            if ftype in options:
+                self.csvType.set(ftype)
+
         self.typeSelection = OptionMenu(self, self.csvType, *options)
         self.typeSelection.grid(row=0, column=1, padx=5)
 
@@ -238,7 +246,8 @@ class FileFrame(Frame):
                                                self.ledger,
                                                self.saveFn,
                                                self.sess_id,
-                                               self.pbar)
+                                               self.pbar,
+                                               3 if identifyImportType(self.fname) == 'Paypal' else None)
 
             self.fname = self.FilePathEntry.get()
             converter(self.fname)

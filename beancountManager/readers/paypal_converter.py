@@ -80,7 +80,9 @@ class PaypalConverter(ConverterBase):
 
         self.old_balance = -12333415.123
 
-        return df[::-1]
+        self.raw_data = df[::-1]
+
+        return self.raw_data
 
     def step_data(self, index, row):
 
@@ -169,3 +171,20 @@ class PaypalConverter(ConverterBase):
                              None)
 
         return outBalance
+
+    def get_balance_at_step(self, index):
+        meta = dict(self.meta, **{data.LINENO_KEY: str(index)})
+        date = self.raw_data['Datum'][index]
+        date = datetime.date(*[int(d) for d
+                               in date.split('.')[::-1]])
+        date += datetime.timedelta(1)  # add one day
+        balance = D(german2usNumber(self.raw_data['Guthaben'][index]))
+
+        balance_dir = Balance(meta,
+                              date,
+                              'Assets:PayPal',
+                              Amount(balance, 'EUR'),
+                              None,
+                              None)
+
+        return balance_dir

@@ -9,7 +9,7 @@ folder_content = os.listdir(path)
 
 all_py_scripts = []
 for content in folder_content:
-    if content[-3:] == '.py' and '__' not in content and 'base' not in content:
+    if content[-3:] == '.py' and '__' not in content and 'base' not in content and 'default' not in content:
         all_py_scripts.append(content)
 
 options = []

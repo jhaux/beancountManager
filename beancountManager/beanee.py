@@ -1,4 +1,4 @@
-from tkinter import Frame, Tk, BOTH, Label, Button, Entry, END
+from tkinter import Frame, Tk, BOTH, Label, Button, Entry, END, TclError
 from tkinter import OptionMenu, StringVar, Grid
 from tkinter.ttk import Separator, Progressbar
 from tkinter import N, E, S, W, LEFT, TOP, BOTTOM, CENTER, X, Y  # noqa
@@ -269,6 +269,24 @@ def main():
     root = Tk()
     mainWindow = Beanee(root)
     root.geometry("800x500+300+300")
+
+    # Stuff done to hide hidden files in the askopen filename dialog
+    # Found at
+    # https://mail.python.org/pipermail/tkinter-discuss/2015-August/003762.html
+    try:
+        # call a dummy dialog with an impossible option to initialize the file
+        # dialog without really getting a dialog window; this will throw a
+        # TclError, so we need a try...except :
+        try:
+            root.tk.call('tk_getOpenFile', '-foobarbaz')
+        except TclError:
+            pass
+        # now set the magic variables accordingly
+        root.tk.call('set', '::tk::dialog::file::showHiddenBtn', '1')
+        root.tk.call('set', '::tk::dialog::file::showHiddenVar', '0')
+    except:
+        pass
+
     root.mainloop()
 
 

@@ -8,7 +8,7 @@ from beancount.core.amount import Amount
 from beancount.core.number import D
 
 from beancountManager.readers.converter_base import ConverterBase
-from beancountManager.util import german2usNumber
+from beancountManager.util import german2usNumber, getDefaultUser
 from beancountManager import data
 
 
@@ -82,6 +82,8 @@ class PaypalConverter(ConverterBase):
 
         self.raw_data = df[::-1]
 
+        self.usertag = getDefaultUser(csv_file)
+
         return self.raw_data
 
     def step_data(self, index, row):
@@ -103,6 +105,8 @@ class PaypalConverter(ConverterBase):
         fr = row['Absender E-Mail-Adresse']
         to = row['Empfänger E-Mail-Adresse']
         other_account = fr if fr != 'johannes.haux@gmx.de' else to
+
+        tags = [self.usertag] if self.usertag else None
 
         payee = row['Name'] if row['Name'] != 'EMPTY' else None
         narr = row['Typ']
@@ -146,7 +150,7 @@ class PaypalConverter(ConverterBase):
                                 '*',  # flag
                                 payee,  # payee (optional)
                                 narr,  # narration
-                                None,  # tags
+                                tags,  # tags
                                 None,  # links
                                 postings)  # postings
 

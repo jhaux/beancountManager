@@ -10,3 +10,11 @@ EXP_OPEN_DATE = datetime.date(2017, 10, 1)
 class filetypes:
     VOLKSBANK = 'Volksbank'
     PAYPAL = 'Paypal'
+    SPARKASSE = 'Sparkassen'
+
+
+USERS = {
+        '1002437887': 'Gemeinsam',
+        'DE02270925555007849600': 'Johannes',
+        '_PayPal_': 'Johannes'
+        }

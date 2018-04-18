@@ -42,8 +42,17 @@ def identifyImportType(filename):
         return data.filetypes.VOLKSBANK
     elif 'Umsaetze_Paypal' in filename:
         return data.filetypes.PAYPAL
+    elif '-umsatz.CSV' in filename:
+        return data.filetypes.SPARKASSE
     else:
         return None
+
+
+def getDefaultUser(filename):
+    for identifier, user in data.USERS.items():
+        if identifier in filename:
+            return user
+    return None
 
 
 def german2usNumber(string_num):

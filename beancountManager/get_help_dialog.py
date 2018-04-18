@@ -81,16 +81,22 @@ class GetHelp(Dialog):
             row_id += 1
 
             name = 'tags'
+            tags = getattr(self.entry, name)
+            if tags is not None:
+                tags = ', '.join(tags)
             self.changes[name] = \
                 self.make_changable(name.title(),
-                                    getattr(self.entry, name),
+                                    tags,
                                     row_id)
             row_id += 1
 
             name = 'links'
+            links = getattr(self.entry, name)
+            if links is not None:
+                links = ', '.join(links)
             self.changes[name] = \
                 self.make_changable(name.title(),
-                                    getattr(self.entry, name),
+                                    links,
                                     row_id)
             row_id += 1
 
@@ -190,6 +196,7 @@ class GetHelp(Dialog):
         for attr, value in self.changes.items():
             if attr == 'tags' or attr == 'links':
                 value = value.get()
+                print(value)
                 if ', ' in value:
                     values = value.split(', ')
                 elif ',' in value:

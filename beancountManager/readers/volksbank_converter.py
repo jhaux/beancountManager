@@ -8,6 +8,7 @@ from beancount.core.number import D
 
 from beancountManager.readers.converter_base import ConverterBase
 from beancountManager import data
+from beancountManager.util import getDefaultUser
 
 
 class VolksbankConverter(ConverterBase):
@@ -50,6 +51,8 @@ class VolksbankConverter(ConverterBase):
 
         raw_data = raw_data.drop(raw_data.tail(2).index)
 
+        self.usertag = getDefaultUser(csv_file)
+
         return raw_data
 
     def step_data(self, index, row):
@@ -64,6 +67,8 @@ class VolksbankConverter(ConverterBase):
         sign = 1 if row['HS'] == 'H' else -1
         date = row['date']
         date = datetime.date(*[int(d) for d in date.split('.')[::-1]])
+
+        tags = [self.usertag] if self.usertag else None
 
         post_from = Posting(fr,  # Account
                             Amount(D(str(amount*sign)), curr),  # units
@@ -86,7 +91,7 @@ class VolksbankConverter(ConverterBase):
                                 '*',  # flag
                                 None,  # payee (optional)
                                 narr,  # narration
-                                None,  # tags
+                                tags,  # tags
                                 None,  # links
                                 postings)  # postings
 

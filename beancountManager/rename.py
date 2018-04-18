@@ -20,10 +20,10 @@ def rename(old, new, ledger='Johannes_Ledger.beancount'):
 
 if __name__ == '__main__':
     renames = {
-            'Expenses:Essen': 'Expenses:EssenAuswaerts',
+            'Liabilities:VISA:Sonja': 'Expenses:VISA:Sonja'
         }
 
     print(RULES)
 
     for k, v in renames.items():
-        rename(k, v)
+        rename(k, v, 'Sonjas_Ledger.beancount')

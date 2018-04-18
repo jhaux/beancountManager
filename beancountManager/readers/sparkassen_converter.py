@@ -42,6 +42,7 @@ class SparkassenConverter(ConverterBase):
                          skiprows=1,
                          names=fields,
                          dtype=str,
+                         encoding='latin3',
                          delimiter=';')
         df = df.replace(np.nan, 'EMPTY', regex=True)
 

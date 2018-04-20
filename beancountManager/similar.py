@@ -40,29 +40,13 @@ def find_similar_entries(entries,
     # For each of the new entries, look at entries at a nearby date.
     duplicates = []
     for entry in filter_ledger(entries, filter_type):
-
-        p1 = entry.payee
-        print('payee', p1)
-        print('date', entry.date)
-        print('date', type(entry.date))
-        debug_cond = p1 is not None and 'Edeka' in str(p1)
-        debug_cond = entry.date == datetime.date(2018, 3, 19)
-
         filtered_entries = list(filter_ledger(
                 data.iter_entry_dates(source_entries,
                                       entry.date - window_head,
                                       entry.date + window_tail),
                 filter_type))
 
-        if debug_cond:
-            print(entry.date)
-            print(len(filtered_entries))
-
         for source_entry in filtered_entries:
-
-            if debug_cond:
-                printer.print_entries([entry, source_entry])
-
             if comparator(entry, source_entry):
                 duplicates.append((entry, source_entry))
                 break

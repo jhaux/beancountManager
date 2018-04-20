@@ -27,6 +27,8 @@ class ConverterBase(object):
                     be received. Ignored if None.
         '''
         self.ledger = ledger
+        print('Ledger at Start:', len(self.ledger))
+
         self.saveFn = saveFn
 
         rules_file = type(self).__name__ + '.rules'
@@ -56,6 +58,8 @@ class ConverterBase(object):
 
         for index, row in df[::-1].iterrows():
 
+            print(len(self.ledger))
+
             if self.balance_at_interval is not None \
                     and index % self.balance_at_interval == 0:
                 balance = self.get_balance_at_step(index)
@@ -65,8 +69,8 @@ class ConverterBase(object):
             entry = self.step_data(index, row)
 
             if entry is not None and self.ingester.is_no_duplicate(entry):
-                entry, opens = self.referencer(entry)
-                self.ledger = self.ingester.ingest(entry)
+                entry, opens = self.referencer(entry, self.ledger)
+                self.ledger = self.ingester.ingest(entry, self.ledger)
                 self.ledger += opens
 
             if self.pbar:

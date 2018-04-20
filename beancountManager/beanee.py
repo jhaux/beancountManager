@@ -144,6 +144,7 @@ class Beanee(Frame):
                            filename,
                            self.openFiles,
                            receive=self.sendDestroy,
+                           update_ledger=self.update_ledger,
                            ledger=self.ledger,
                            saveFn=self.storeLedger,
                            sess_id=self.session_start)
@@ -152,6 +153,8 @@ class Beanee(Frame):
 
             self.sep.grid(row=self.openFiles)
             self.addFileButton.grid(row=self.openFiles + 1)
+
+            self.ledger = ff.ledger
 
         self.toggleIntroText()
 
@@ -171,6 +174,9 @@ class Beanee(Frame):
         self.sortFileDialogue()
         self.toggleIntroText()
 
+    def update_ledger(self, ledger):
+        self.ledger = ledger
+
 
 class FileFrame(Frame):
 
@@ -179,6 +185,7 @@ class FileFrame(Frame):
                  fname,
                  index,
                  receive,
+                 update_ledger,
                  ledger,
                  saveFn,
                  sess_id='noid'):
@@ -192,6 +199,7 @@ class FileFrame(Frame):
         self.fname = fname
         self.index = index
         self.receive = receive
+        self.update_ledger = update_ledger
 
         self.initUI()
 
@@ -235,8 +243,10 @@ class FileFrame(Frame):
                                                3 if identifyImportType(self.fname) == 'Paypal' else None)
 
             self.fname = self.FilePathEntry.get()
-            converter(self.fname)
             backup_file_by_sessio_start(self.fname, self.sess_id)
+            self.ledger = converter(self.fname)
+            print('Ledger len at end of import:', len(self.ledger))
+            self.update_ledger(self.ledger)
 
     def getHelp(self, entry, possible_duplicate=None):
         helpDialog = GetHelp(self, entry, self.ledger, possible_duplicate)

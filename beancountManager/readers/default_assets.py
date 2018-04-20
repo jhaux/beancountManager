@@ -1,5 +1,6 @@
 DEFAULT_ASSETS = {
-        '1002437887': 'Assets:Sparkasse:Gemeinschaftskonto'
+        '1002437887': 'Assets:Sparkasse:Gemeinschaftskonto',
+        '2070183389': 'Assets:Sparkasse:Sonja:Giro'
         }
 
 

@@ -37,8 +37,10 @@ class Referencer(object):
                 for rule in self.rule_dicts:
                     self.rules.append(Rule(rule))
 
-    def __call__(self, entry):
+    def __call__(self, entry, ledger):
         opens = []
+
+        self.ledger = ledger
 
         if isinstance(entry, Transaction):
             matchedSomeRule = False
@@ -147,11 +149,17 @@ class Rule(object):
             for k, v in self.rd.items():
                 if k != 'postings' and k != 'units':
                     _, _, method, change = v
-                    new_str = self.atomic_modofocation(
-                            getattr(entry, k),
-                            method,
-                            change)
-                    entry = entry._replace(**{k: new_str})
+                    if k == 'tags' or k == 'links':
+                        new_str = self.atomic_modofocation(
+                                ', '.join(getattr(entry, k)),
+                                method,
+                                change)
+                    else:
+                        new_str = self.atomic_modofocation(
+                                getattr(entry, k),
+                                method,
+                                change)
+                        entry = entry._replace(**{k: new_str})
                 else:
                     postings = entry.postings
                     for idx, p in enumerate(v):

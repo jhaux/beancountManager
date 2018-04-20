@@ -175,7 +175,8 @@ class DeduplicateIngester(object):
         self.U = UmbuchungsComparator(ledger, datetime.timedelta(14))
         self.D = DuplicateComparator(datetime.timedelta(1))
 
-    def ingest(self, entry):
+    def ingest(self, entry, ledger):
+        self.ledger = ledger
         if not self.entry_is_in_ledger(entry):
             self.ledger += [entry]
         self.ledger = sort_by_date(self.ledger)

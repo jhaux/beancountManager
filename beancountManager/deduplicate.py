@@ -1,12 +1,14 @@
 from beancount import loader
 from beancount.parser import printer
 from beancount.ingest import similar
-from beancount.core.data import Transaction
+from beancount.core.data import Transaction, Open, D
 
 import datetime
 from collections import OrderedDict
 
 from beancountManager.util import identifyImportType
+from beancountManager.io import sort_by_date
+from beancountManager.similar import filter_ledger, find_similar_entries
 
 
 def find_and_delete_duplicates(l):
@@ -66,8 +68,6 @@ class UmbuchungsComparator(object):
                     if not d1[a] == d2[a]:
                         return False
 
-                print(a1 | a2)
-
                 return True
 
             # Special case: Gebühren mit dabei
@@ -80,18 +80,14 @@ class UmbuchungsComparator(object):
                         if 'Gebuehren' in acc:
                             del d[acc]
 
-                print(d1)
-                print(d2)
                 if not len(d1) == len(d2):
                     return False
 
                 # one of the postings of the same size as one of the others?
                 n_eq = 0
                 for account in d1.keys():
-                    print(account)
                     if d1[account] == d2[account]:
                         n_eq += 1
-                print('n_eq', n_eq)
 
                 if n_eq == 1:
                     # Delete the entry with only 2 entries
@@ -120,6 +116,7 @@ class DuplicateComparator(object):
     def __call__(self, entry1, entry2):
         e1 = entry1
         e2 = entry2
+
         if self.max_date_delta is not None:
             delta = ((entry1.date - entry2.date)
                      if entry1.date > entry2.date else
@@ -133,6 +130,12 @@ class DuplicateComparator(object):
             if e1.meta['import_file'] == e2.meta['import_file'] \
                     and e1.meta['import_lineno'] == e2.meta['import_lineno']:
                 return True
+
+            # Same file but different number: Cannot possibly be a dupe if
+            # we trust the data
+            if e1.meta['import_file'] == e2.meta['import_file'] \
+                    and e1.meta['import_lineno'] != e2.meta['import_lineno']:
+                return False
 
             # Duplicates should only stem from the same import file type
             ft1 = identifyImportType(e1.meta['import_file'])
@@ -175,6 +178,7 @@ class DeduplicateIngester(object):
     def ingest(self, entry):
         if not self.entry_is_in_ledger(entry):
             self.ledger += [entry]
+        self.ledger = sort_by_date(self.ledger)
 
         return self.ledger
 
@@ -190,11 +194,7 @@ class DeduplicateIngester(object):
             return False
 
         try:
-            print('Found Duplicates')
-            printer.print_entries([entry])
             print('Umbuchung')
-            printer.print_entries(list(duplicates_um[0]))
-            print('')
         except Exception as e:
             print(e)
 
@@ -203,18 +203,27 @@ class DeduplicateIngester(object):
     def is_no_duplicate(self, entry):
         '''Used to determine if entry is in ledger BEFORE the entry has been
         processed.'''
-        duplicates = similar.find_similar_entries([entry],
-                                                  self.ledger,
-                                                  comparator=self.D,
-                                                  window_days=0)
-
-        if len(duplicates) != 0:
-            # print('Dropping Entry - it already exists')
-            # printer.print_entries([entry])
-            # print('')
-            return False
-        else:
+        if isinstance(entry, Open):
+            all_open_directives = list(filter_ledger(self.ledger, Open))
+            for open_dir in all_open_directives:
+                if entry.account == open_dir.account:
+                    if entry.date < open_dir.date:
+                        self.ledger.remove(open_dir)
+                        return True
+                    else:
+                        print('Open Duplicate')
+                        return False
             return True
+        else:
+            duplicates = find_similar_entries([entry],
+                                              self.ledger,
+                                              comparator=self.D,
+                                              window_days=0)
+            if len(duplicates) > 0:
+                print('Duplicate')
+                return False
+            else:
+                return True
 
 
 def n_um(l):

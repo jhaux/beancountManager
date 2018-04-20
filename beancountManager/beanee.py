@@ -14,6 +14,7 @@ from beancountManager import readers
 from beancountManager.get_help_dialog import GetHelp
 from beancountManager.util import backup_file_by_sessio_start
 from beancountManager.util import identifyImportType
+from beancountManager.io import store_sorted_ledger
 
 
 class Beanee(Frame):
@@ -126,26 +127,10 @@ class Beanee(Frame):
             print('')
 
     def storeLedger(self):
+        self.ledgerPath = self.ledgerVar.get()
         backup_file_by_sessio_start(self.ledgerPath, self.session_start)
 
-        def key(entry):
-            tp = type(entry).__name__
-
-            primary = entry.date
-            secondary = 0 if tp == 'Open' else 1 if tp == 'Balance' else 2
-
-            return primary, secondary
-
-        self.ledger = sorted(self.ledger,
-                             key=key)
-
-        self.ledger = self.deduplicate(self.ledger)
-
-        self.ledgerPath = self.ledgerVar.get()
-        with open(self.ledgerPath, 'w+') as ledgerFile:
-            ledgerFile.write('option "title" "J\'s Beancount file"\n'
-                             'option "operating_currency" "EUR"\n\n')
-            printer.print_entries(self.ledger, file=ledgerFile)
+        store_sorted_ledger(self.ledger, self.ledgerPath)
 
     def deduplicate(self, ledger):
         return ledger

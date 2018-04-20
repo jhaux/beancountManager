@@ -9,7 +9,14 @@ setup(name='beancountManager',
       license='GPLv2',
       packages=['beancountManager'],
       install_requires=[
+                    'beancount',
+                    'copy',
+                    'datetime',
+                    'json',
+                    'numpy',
+                    'os',
                     'pandas',
-                    'numpy'
+                    'time'
+                    'tkinter',
                           ],
       zip_sage=False)

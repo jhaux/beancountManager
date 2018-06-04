@@ -61,9 +61,6 @@ class ConverterBase(object):
 
             print('entries in ledger:', len(self.ledger))
 
-            if len(self.ledger) - self.len_init > 2:
-                raise Exception
-
             if self.balance_at_interval is not None \
                     and index % self.balance_at_interval == 0:
                 balance = self.get_balance_at_step(index)

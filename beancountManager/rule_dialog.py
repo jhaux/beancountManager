@@ -119,7 +119,10 @@ class RuleDialog(Dialog):
                     preVals['changeTo'] = r[3]
                 elif entry:
                     pat = getattr(entry, k)
-                    preVals['pattern'] = pat if pat else ''
+                    if k == 'tags' or k == 'links':
+                        preVals['pattern'] = ', '.join(pat) if pat else ''
+                    else:
+                        preVals['pattern'] = pat if pat else ''
 
                 # add pattern change pair
                 chv, rel, pat, ch, cht = \

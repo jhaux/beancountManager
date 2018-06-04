@@ -149,17 +149,11 @@ class Rule(object):
             for k, v in self.rd.items():
                 if k != 'postings' and k != 'units':
                     _, _, method, change = v
-                    if k == 'tags' or k == 'links':
-                        new_str = self.atomic_modofocation(
-                                ', '.join(getattr(entry, k)),
-                                method,
-                                change)
-                    else:
-                        new_str = self.atomic_modofocation(
-                                getattr(entry, k),
-                                method,
-                                change)
-                        entry = entry._replace(**{k: new_str})
+                    new_str = self.atomic_modofocation(
+                            getattr(entry, k),
+                            method,
+                            change)
+                    entry = entry._replace(**{k: new_str})
                 else:
                     postings = entry.postings
                     for idx, p in enumerate(v):

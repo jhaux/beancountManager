@@ -63,7 +63,7 @@ class VolksbankConverter(ConverterBase):
         to = row['to']
         narr = row['description'].replace('\n', '')
         curr = row['currency']
-        amount = float(row['amount'].replace(',', '.'))
+        amount = float(row['amount'].replace('.', '').replace(',', '.'))
         sign = 1 if row['HS'] == 'H' else -1
         date = row['date']
         date = datetime.date(*[int(d) for d in date.split('.')[::-1]])

@@ -131,6 +131,7 @@ class Beanee(Frame):
         backup_file_by_sessio_start(self.ledgerPath, self.session_start)
 
         store_sorted_ledger(self.ledger, self.ledgerPath)
+        print('stored Ledger at {}'.format(self.ledgerPath))
 
     def deduplicate(self, ledger):
         return ledger
@@ -282,7 +283,11 @@ def main():
     except:
         pass
 
-    root.mainloop()
+    try:
+        root.mainloop()
+    except Exception as e:
+        mainWindow.storeLedger()
+        print(e)
 
 
 if __name__ == '__main__':

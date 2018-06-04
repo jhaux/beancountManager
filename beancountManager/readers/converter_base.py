@@ -27,7 +27,8 @@ class ConverterBase(object):
                     be received. Ignored if None.
         '''
         self.ledger = ledger
-        print('Ledger at Start:', len(self.ledger))
+        self.len_init = len(self.ledger)
+        print('Ledger at Start:', self.len_init)
 
         self.saveFn = saveFn
 
@@ -58,7 +59,10 @@ class ConverterBase(object):
 
         for index, row in df[::-1].iterrows():
 
-            print(len(self.ledger))
+            print('entries in ledger:', len(self.ledger))
+
+            if len(self.ledger) - self.len_init > 2:
+                raise Exception
 
             if self.balance_at_interval is not None \
                     and index % self.balance_at_interval == 0:
@@ -72,6 +76,8 @@ class ConverterBase(object):
                 entry, opens = self.referencer(entry, self.ledger)
                 self.ledger = self.ingester.ingest(entry, self.ledger)
                 self.ledger += opens
+
+            self.saveFn()
 
             if self.pbar:
                 self.pbar.step()

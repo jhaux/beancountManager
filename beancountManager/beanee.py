@@ -155,7 +155,7 @@ class Beanee(Frame):
             self.sep.grid(row=self.openFiles)
             self.addFileButton.grid(row=self.openFiles + 1)
 
-            self.ledger = ff.ledger
+            self.ledger = list(ff.ledger)
 
         self.toggleIntroText()
 
@@ -177,6 +177,7 @@ class Beanee(Frame):
 
     def update_ledger(self, ledger):
         self.ledger = ledger
+        self.storeLedger()
 
 
 class FileFrame(Frame):
@@ -238,7 +239,7 @@ class FileFrame(Frame):
         if name != '':
             converter = getattr(readers, name)(self.getHelp,
                                                self.ledger,
-                                               self.saveFn,
+                                               self.update_ledger,
                                                self.sess_id,
                                                self.pbar,
                                                3 if identifyImportType(self.fname) == 'Paypal' else None)

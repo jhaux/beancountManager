@@ -74,7 +74,7 @@ class ConverterBase(object):
                 self.ledger = self.ingester.ingest(entry, self.ledger)
                 self.ledger += opens
 
-            self.saveFn()
+            self.saveFn(self.ledger)
 
             if self.pbar:
                 self.pbar.step()

@@ -130,7 +130,7 @@ class PaypalConverter(ConverterBase):
 
         # Generate Postings in ordered fashion
         postings_map = OrderedDict()
-        postings_map['Assets:PayPal'] = netto
+        postings_map['Assets:PayPal:Johannes'] = netto
         postings_map['Expenses:PayPal:Gebuehren'] = gebuhr
         postings_map[other_account] = -brutto
 

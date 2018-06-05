@@ -10,6 +10,11 @@ def store_sorted_ledger(
 
         ledger = sort_by_date(ledger, key_dict)
 
+        # print('storing {} entries.'.format(len(ledger)))
+        # printer.print_entries(ledger)
+        # for e in ledger:
+        #     print(e)
+
         with open(path, 'w+') as ledgerFile:
             ledgerFile.write('option "title" "{}"\n'.format(title)
                              + 'option "operating_currency" "EUR"\n\n')
@@ -29,7 +34,7 @@ def sort_by_date(
 
             return primary, secondary
 
-        ledger = sorted(ledger,
-                        key=key)
+        ledger = list(sorted(ledger,
+                             key=key))
 
         return ledger

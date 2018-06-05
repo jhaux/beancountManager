@@ -100,7 +100,7 @@ class VolksbankConverter(ConverterBase):
     def get_in_balance(self):
         inBalance = Balance(self.meta,
                             self.date_in,
-                            'Assets:VB:Giro',
+                            'Assets:VB:Johannes:Giro',
                             Amount(self.balance_in, 'EUR'),
                             None,
                             None)
@@ -110,7 +110,7 @@ class VolksbankConverter(ConverterBase):
     def get_out_balance(self):
         outBalance = Balance(self.meta,
                              self.date_out,
-                             'Assets:VB:Giro',
+                             'Assets:VB:Johannes:Giro',
                              Amount(self.balance_out, 'EUR'),
                              None,
                              None)
